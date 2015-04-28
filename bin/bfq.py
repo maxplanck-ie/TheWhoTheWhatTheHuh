@@ -63,7 +63,7 @@ while True:
 
     #Get more statistics and create PDFs
     try :
-        message += misc.parseConversionStats(config)
+        message += "\n\n"+misc.parseConversionStats(config)
     except :
         print("Got an error during parseConversionStats")
         errorEmail(config, "Got an error during parseConversionStats")

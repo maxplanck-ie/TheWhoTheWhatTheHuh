@@ -126,7 +126,7 @@ def postMakeSteps(config) :
     #Undetermined indices
     undeter = parserDemultiplexStats(config)
 
-    message = "\nCurrent free space: %i of %i gigs (%5.2f%%)" % (
+    message = "Current free space: %i of %i gigs (%5.2f%%)\n" % (
         free,tot,100*free/tot)
     message += undeter
     return(message)
