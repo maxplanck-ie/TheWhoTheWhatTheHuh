@@ -13,10 +13,10 @@ from email.mime.text import MIMEText
 #Returns 1 on processed, 0 on unprocessed
 def flowCellProcessed(config) :
     if(os.access("%s/%s/casava.finished" % (config.get("Paths","outputDir"), config.get("Options","runID")), os.F_OK)) :
-        return 1
+        return True
     if(os.access("%s/%s/fastq.made" % (config.get("Paths","outputDir"), config.get("Options","runID")), os.F_OK)) :
-        return 1
-    return 0
+        return True
+    return False
 
 '''
 Iterate over all folders in config.baseDir from machine SN7001180. For each,
@@ -34,20 +34,19 @@ process, then the runID is filled in. Otherwise, that's set to None.
 def newFlowCell(config) :
     dirs = glob.glob("%s/*SN7001180*/RTAComplete.txt" % config.get("Paths","baseDir"))
     for d in dirs :
-        print("checking %s" % d)
+        print("checking %s" % d) #DEBUG
         #Get the flow cell ID (e.g., 150416_SN7001180_0196_BC605HACXX)
         config.set('Options','runID',d.split("/")[-2])
-        print(config.get("Options","runID"))
 
-        if(flowCellProcessed(config) == 0) :
-            print("Found a new flow cell")
+        if(flowCellProcessed(config) is False) :
+            print("Found a new flow cell: %s" % config.get("Options","runID"))
             return config
-    config.runID = None
+        else :
+            config.set("Options","runID","")
     return config
 
 def markFinished(config) :
-    f = open("%s/%s/fastq.made" % (config["Paths"]["outputDir"], config["Paths"]["runID"]), "w")
-    f.close()
+    open("%s/%s/fastq.made" % (config["Paths"]["outputDir"], config["Options"]["runID"]), "w").close()
 
 '''
 This function needs to be run after newFlowCell() returns with config.runID

@@ -109,15 +109,15 @@ def postMakeSteps(config) :
     global localConfig
     localConfig = config
 
-    ##FastQC
-    #p = mp.Pool(int(config.get("Options","postMakeThreads")))
-    #p.map(FastQC_worker, sampleFiles)
+    #FastQC
+    p = mp.Pool(int(config.get("Options","postMakeThreads")))
+    p.map(FastQC_worker, sampleFiles)
 
-    ##md5sum
-    #p = mp.Pool(int(config.get("Options","postMakeThreads")))
-    #p.map(md5sum_worker, projectDirs)
+    #md5sum
+    p = mp.Pool(int(config.get("Options","postMakeThreads")))
+    p.map(md5sum_worker, projectDirs)
 
-    ##disk usage
+    #disk usage
     (tot,used,free) = shutil.disk_usage(config.get("Paths","outputDir"))
     tot /= 1024*1024*1024 #Convert to gigs
     used /= 1024*1024*1024
