@@ -34,41 +34,47 @@ while True:
 
     startTime=datetime.datetime.now()
 
-    ##Make the fastq files
-    #try:
-    #    makeFastq.bcl2fq(config)
-    #except :
-    #    print("Got an error in bcl2fq")
-    #    errorEmail(config,"Got an error in bcl2fq")
-    #    sleep(config)
-    #    continue
+    #Make the fastq files
+    try:
+        makeFastq.bcl2fq(config)
+    except :
+        print("Got an error in bcl2fq")
+        errorEmail(config,"Got an error in bcl2fq")
+        sleep(config)
+        continue
 
-    ##Copy over xml and InterOp/
-    #try:
-    #    makeFastq.cpXmlInterOp(config)
-    #except :
-    #    print("Got an error in cpXmlInteOp")
-    #    errorEmail(config,"Got an error in cpXmlInteOp")
-    #    sleep(config)
-    #    continue
+    #Copy over xml and InterOp/
+    try:
+        makeFastq.cpXmlInterOp(config)
+    except :
+        print("Got an error in cpXmlInteOp")
+        errorEmail(config,"Got an error in cpXmlInteOp")
+        sleep(config)
+        continue
 
-    ##Run post-processing steps
-    #try :
-    #    message = afterFastq.postMakeSteps(config)
-    #except :
-    #    print("Got an error during postMakeSteps")
-    #    errorEmail(config, "Got an error during postMakeSteps")
-    #    sleep(config)
-    #    continue
+    #Run post-processing steps
+    try :
+        message = afterFastq.postMakeSteps(config)
+    except :
+        print("Got an error during postMakeSteps")
+        errorEmail(config, "Got an error during postMakeSteps")
+        sleep(config)
+        continue
+
+    #Get more statistics and create PDFs
+    try :
+        message += misc.parseConversionStats(config)
+    except :
+        print("Got an error during parseConversionStats")
+        errorEmail(config, "Got an error during parseConversionStats")
+        sleep(config)
+        continue
 
     runTime = datetime.datetime.now()-startTime
 
-    #Get more statistics
-    print(misc.parseConversionStats(config))
-
-    #Email finished message
+    ##Email finished message
     #try :
-    #misc.finishedEmail(config, message, runTime)
+    misc.finishedEmail(config, message, runTime)
     #except :
     #    #Unrecoverable error
     #    sys.exit("Couldn't send the finished email! Quiting")

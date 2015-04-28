@@ -10,6 +10,7 @@ This will be our new bcl to fastq pipeline. Features will include:
 To Do
  [ ] - Do we ever have the same sample name split across libraries in the same project/flow cell? The current implementation will overwrite the fastqc results for that. A better option might be to make subdirectories within each FASTQC_projectID directory
  [ ] - Combine flowcells/lanes from submission (with our flowcell focus we still have issues if submissions are spread over many flow cells)
- [ ] - Per-project PDF files
+ [X] - Per-project PDF files
  [ ] - What does DEEP need in addition?
  [ ] - Share stuff to EVA automatically, rather than with `seq_share.sh`
+ [ ] - Give some proper documentation above, particularly about postMakeThreads.
