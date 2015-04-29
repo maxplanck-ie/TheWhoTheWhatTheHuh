@@ -14,9 +14,19 @@ def bcl2fq(config) :
     config.outputDir = /dont_touch_this/solexa_data/final
     config.runID = XXX
     '''
-    #We need to change working directories
+    #Make the output directories
     os.makedirs("%s/%s" % (config.get("Paths","outputDir"),config.get("Options","runID")), exist_ok=True)
-    cmd = "%s %s -o %s/%s -R %s/%s" % (config.get("bcl2fastq","bcl2fastq"),config.get("bcl2fastq","bcl2fastq_options"),config.get("Paths","outputDir"),config.get("Options","runID"),config.get("Paths","baseDir"),config.get("Options","runID"))
+    os.makedirs("%s/%s/InterOp" % (config.get("Paths","outputDir"),config.get("Options","runID")), exist_ok=True)
+    cmd = "%s %s -o %s/%s -R %s/%s --interop-dir %s/%s/InterOp" % (
+        config.get("bcl2fastq","bcl2fastq"),
+        config.get("bcl2fastq","bcl2fastq_options"),
+        config.get("Paths","outputDir"),
+        config.get("Options","runID"),
+        config.get("Paths","baseDir"),
+        config.get("Options","runID"),
+        config.get("Paths","outputDir"),
+        config.get("Options","runID")
+    )
     print("[bcl2fq] Running: %s" % cmd)
     subprocess.check_call(cmd, shell=True)
 

@@ -111,11 +111,11 @@ def makeProjectPDF(node, project, config) :
                              "%5.2f" % (100*(e[5]/e[4])),
                              "%5.2f" % (e[6]/e[4])
                     ])
-    #Test page flow
-    for i in range(100) :
-        d = data[len(data)-1]
-        d = [i,d[1],d[2],d[3],d[4],d[5],d[6],d[7]]
-        data.append(d)
+    ##Test page flow
+    #for i in range(100) :
+    #    d = data[len(data)-1]
+    #    d = [i,d[1],d[2],d[3],d[4],d[5],d[6],d[7]]
+    #    data.append(d)
     t = Table(data, style=[
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
         ], repeatRows=1)

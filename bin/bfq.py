@@ -28,7 +28,7 @@ while True:
     #Ensure we have sufficient space
     if(misc.enoughFreeSpace(config) == False) :
         print("Error: insufficient free space!")
-        errorEmail(config,"Error: insufficient free space!")
+        misc.errorEmail(config,"Error: insufficient free space!")
         sleep(config)
         continue
 
@@ -39,7 +39,7 @@ while True:
         makeFastq.bcl2fq(config)
     except :
         print("Got an error in bcl2fq")
-        errorEmail(config,"Got an error in bcl2fq")
+        misc.errorEmail(config,"Got an error in bcl2fq")
         sleep(config)
         continue
 
@@ -48,7 +48,7 @@ while True:
         makeFastq.cpXmlInterOp(config)
     except :
         print("Got an error in cpXmlInteOp")
-        errorEmail(config,"Got an error in cpXmlInteOp")
+        misc.errorEmail(config,"Got an error in cpXmlInteOp")
         sleep(config)
         continue
 
@@ -57,17 +57,16 @@ while True:
         message = afterFastq.postMakeSteps(config)
     except :
         print("Got an error during postMakeSteps")
-        errorEmail(config, "Got an error during postMakeSteps")
+        misc.errorEmail(config, "Got an error during postMakeSteps")
         sleep(config)
         continue
 
-    print(misc.parseConversionStats(config))
     #Get more statistics and create PDFs
     try :
         message += "\n\n"+misc.parseConversionStats(config)
     except :
         print("Got an error during parseConversionStats")
-        errorEmail(config, "Got an error during parseConversionStats")
+        misc.errorEmail(config, "Got an error during parseConversionStats")
         sleep(config)
         continue
 
