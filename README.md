@@ -14,6 +14,7 @@ To Do
  [X] - PDFs should allow graphics and frames
  [ ] - Graphics should probably be contained in the module
  [ ] - Need to not buffer logging information
- [ ] - What does DEEP need in addition?
+ [X] - What does DEEP need in addition? Answer: nothing
+ [ ] - Xml and InterOp stuff should be directly written to yet another directory.
  [ ] - Share stuff to EVA automatically, rather than with `seq_share.sh`
  [ ] - Give some proper documentation above, particularly about postMakeThreads.
