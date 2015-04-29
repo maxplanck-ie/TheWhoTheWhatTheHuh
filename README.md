@@ -13,6 +13,7 @@ To Do
  [X] - Per-project PDF files
  [X] - PDFs should allow graphics and frames
  [ ] - Graphics should probably be contained in the module
+ [ ] - Need to not buffer logging information
  [ ] - What does DEEP need in addition?
  [ ] - Share stuff to EVA automatically, rather than with `seq_share.sh`
  [ ] - Give some proper documentation above, particularly about postMakeThreads.

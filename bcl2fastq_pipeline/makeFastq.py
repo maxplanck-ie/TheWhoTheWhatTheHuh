@@ -34,8 +34,8 @@ def cpXmlInterOp(config) :
     '''
     Copy over the InterOp directory and the base .xml files
     '''
-    #Remove the tree if it exists
-    shutil.rmtree("%s/%s/InterOp" % (config.get("Paths","outputDir"),config.get("Options","runID")), ignore_errors=True)
-    shutil.copytree("%s/%s/InterOp" % (config.get("Paths","baseDir"),config.get("Options","runID")), "%s/%s/InterOp" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    ##Remove the tree if it exists
+    #shutil.rmtree("%s/%s/InterOp" % (config.get("Paths","outputDir"),config.get("Options","runID")), ignore_errors=True)
+    #shutil.copytree("%s/%s/InterOp" % (config.get("Paths","baseDir"),config.get("Options","runID")), "%s/%s/InterOp" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     shutil.copy2("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","outputDir"), config.get("Options","runID")))
     shutil.copy2("%s/%s/runParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","outputDir"), config.get("Options","runID")))

@@ -85,6 +85,12 @@ def makeProjectPDF(node, project, config) :
                 continue
             for lane in barcode.findall("Lane") :
                 e[2] = lane.get("number")
+                e[3] = 0
+                e[4] = 0
+                e[5] = 0
+                e[6] = 0
+                e[7] = 0
+                e[8] = 0
                 for tile in lane.findall("Tile") :
                     e[3] += int(tile[1][0].text) #Pf->ClusterCount
                     e[4] += int(tile[1][1][0].text) #Pf->Read1->Yield
@@ -93,29 +99,25 @@ def makeProjectPDF(node, project, config) :
                     if(PE) :
                         e[7] += int(tile[1][2][1].text) #Pf->Read2->YieldQ30
                         e[8] += int(tile[1][2][2].text) #Pf->Read2->QualSum
-            if(PE) :
-                data.append([e[0],
-                             e[1],
-                             e[2],
-                             e[3],
-                             "%5.2f" % (100*(e[5]/e[4])),
-                             "%5.2f" % (e[6]/e[4]),
-                             "%5.2f" % (100*(e[7]/e[4])),
-                             "%5.2f" % (e[8]/e[4])
-                    ])
-            else :
-                data.append([e[0],
-                             e[1],
-                             e[2],
-                             e[3],
-                             "%5.2f" % (100*(e[5]/e[4])),
-                             "%5.2f" % (e[6]/e[4])
-                    ])
-    ##Test page flow
-    #for i in range(100) :
-    #    d = data[len(data)-1]
-    #    d = [i,d[1],d[2],d[3],d[4],d[5],d[6],d[7]]
-    #    data.append(d)
+                if(PE) :
+                    data.append([e[0],
+                                 e[1],
+                                 e[2],
+                                 e[3],
+                                 "%5.2f" % (100*(e[5]/e[4])),
+                                 "%5.2f" % (e[6]/e[4]),
+                                 "%5.2f" % (100*(e[7]/e[4])),
+                                 "%5.2f" % (e[8]/e[4])
+                        ])
+                else :
+                    data.append([e[0],
+                                 e[1],
+                                 e[2],
+                                 e[3],
+                                 "%5.2f" % (100*(e[5]/e[4])),
+                                 "%5.2f" % (e[6]/e[4])
+                        ])
+
     t = Table(data, style=[
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
         ], repeatRows=1)
