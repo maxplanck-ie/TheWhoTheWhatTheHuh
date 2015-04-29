@@ -35,37 +35,36 @@ while True:
 
     startTime=datetime.datetime.now()
 
-    ##Make the fastq files
-    #try:
-    #    makeFastq.bcl2fq(config)
-    #except :
-    #    sys.stderr.write("Got an error in bcl2fq\n")
-    #    sys.stderr.flush()
-    #    misc.errorEmail(config,"Got an error in bcl2fq")
-    #    sleep(config)
-    #    continue
+    #Make the fastq files
+    try:
+        makeFastq.bcl2fq(config)
+    except :
+        sys.stderr.write("Got an error in bcl2fq\n")
+        sys.stderr.flush()
+        misc.errorEmail(config,"Got an error in bcl2fq")
+        sleep(config)
+        continue
 
-    ##Run post-processing steps
-    #try :
-    #    message = afterFastq.postMakeSteps(config)
-    #except :
-    #    sys.stderr.write("Got an error during postMakeSteps\n")
-    #    sys.stderr.flush()
-    #    misc.errorEmail(config, "Got an error during postMakeSteps")
-    #    sleep(config)
-    #    continue
+    #Run post-processing steps
+    try :
+        message = afterFastq.postMakeSteps(config)
+    except :
+        sys.stderr.write("Got an error during postMakeSteps\n")
+        sys.stderr.flush()
+        misc.errorEmail(config, "Got an error during postMakeSteps")
+        sleep(config)
+        continue
 
-    ##Copy over xml and FastQC stuff
-    #try:
-    #    makeFastq.cpSeqFac(config)
-    #except :
-    #    sys.stderr.write("Got an error in cpSeqFac\n")
-    #    sys.stderr.flush()
-    #    misc.errorEmail(config,"Got an error in cpSeqFac")
-    #    sleep(config)
-    #    continue
+    #Copy over xml and FastQC stuff
+    try:
+        makeFastq.cpSeqFac(config)
+    except :
+        sys.stderr.write("Got an error in cpSeqFac\n")
+        sys.stderr.flush()
+        misc.errorEmail(config,"Got an error in cpSeqFac")
+        sleep(config)
+        continue
 
-    message = ""
     #Get more statistics and create PDFs
     try :
         message += "\n\n"+misc.parseConversionStats(config)
@@ -78,15 +77,15 @@ while True:
 
     runTime = datetime.datetime.now()-startTime
 
-    ##Email finished message
-    #try :
-    #    misc.finishedEmail(config, message, runTime)
-    #except :
-    #    #Unrecoverable error
-    #    sys.exit("Couldn't send the finished email! Quiting")
+    #Email finished message
+    try :
+        misc.finishedEmail(config, message, runTime)
+    except :
+        #Unrecoverable error
+        sys.exit("Couldn't send the finished email! Quiting")
 
     ##Mark the flow cell as having been processed
     #findFlowCells.markFinished(config)
 
-    #For debugging, remove me!
+    #DEBUGGING!
     break
