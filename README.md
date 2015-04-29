@@ -8,13 +8,14 @@ This will be our new bcl to fastq pipeline. Features will include:
   * Written explicitly for python3, just to future proof things a bit.
 
 To Do
- [ ] - Do we ever have the same sample name split across libraries in the same project/flow cell? The current implementation will overwrite the fastqc results for that. A better option might be to make subdirectories within each FASTQC_projectID directory
- [ ] - Combine flowcells/lanes from submission (with our flowcell focus we still have issues if submissions are spread over many flow cells)
- [X] - Per-project PDF files
- [X] - PDFs should allow graphics and frames
- [ ] - Graphics should probably be contained in the module
- [ ] - Need to not buffer logging information
- [X] - What does DEEP need in addition? Answer: nothing
- [ ] - Xml and InterOp stuff should be directly written to yet another directory.
- [ ] - Share stuff to EVA automatically, rather than with `seq_share.sh`
- [ ] - Give some proper documentation above, particularly about postMakeThreads.
+ - [ ] Do we ever have the same sample name split across libraries in the same project/flow cell? The current implementation will overwrite the fastqc results for that. A better option might be to make subdirectories within each FASTQC_projectID directory
+ - [ ] Combine flowcells/lanes from submission (with our flowcell focus we still have issues if submissions are spread over many flow cells)
+ - [X] Per-project PDF files
+ - [X] PDFs should allow graphics and frames
+ - [ ] Graphics should probably be contained in the module
+ - [ ] Need to not buffer logging information
+ - [X] What does DEEP need in addition? Answer: nothing
+ - [ ] Add an explanation of each column to the PDFs
+ - [ ] Xml and InterOp stuff should be directly written to yet another directory.
+ - [ ] Share stuff to EVA automatically, rather than with `seq_share.sh`
+ - [ ] Give some proper documentation above, particularly about postMakeThreads.
