@@ -8,14 +8,11 @@ import smtplib
 from email.mime.text import MIMEText
 import xml.etree.ElementTree as ET
 from reportlab.lib import colors
-from reportlab.platypus import BaseDocTemplate, Table, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate
+from reportlab.platypus import BaseDocTemplate, Table, Preformatted, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate, TableStyle
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4, landscape
 from time import strftime
 from reportlab.pdfgen import canvas
-
-def FirstPage(canvas, doc) :
-    print("In the first page")
 
 def makeProjectPDF(node, project, config) :
     """
@@ -29,11 +26,10 @@ def makeProjectPDF(node, project, config) :
       * % Bases > Q30
       * Average base quality
     For paired-end datasets, the last two columns are repeated and named differently.
-
-    To Do:
-    Add an image?
-    Footer?
     """
+    stylesheet=getSampleStyleSheet()
+    #stylesheet.add(ParagraphStyle(name="fixed", parent=stylesheet['Normal'], fontName="Courier", spaceBefore=10))
+
     pdf = BaseDocTemplate("%s/%s/%s/SequencingReport.pdf" % (
         config.get("Paths","outputDir"),config.get("Options","runID"),
         project), pagesize=A4)
@@ -52,7 +48,6 @@ def makeProjectPDF(node, project, config) :
         data = [["Sample ID","Barcode","Lane","# Reads","% Bases\n>= Q30","Ave. Qual."]]
 
     #A text blurb
-    stylesheet=getSampleStyleSheet()
     string = "Project: %s" % project
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
@@ -65,7 +60,14 @@ def makeProjectPDF(node, project, config) :
     string = "bcl2fastq version: %s" % (config.get("Version","bcl2fastq"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
+    readLength = int(int(node[0][0][0][0][0][1][0].text)/int(node[0][0][0][0][0][0].text))
     string = "FastQC version: %s" % (config.get("Version","fastQC"))
+    p = Paragraph(string, style=stylesheet['Normal'])
+    elements.append(p)
+    if(PE) :
+        string = "%i base paired-end reads" % readLength
+    else :
+        string = "%i base single-end reads" % readLength
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
 
@@ -122,6 +124,53 @@ def makeProjectPDF(node, project, config) :
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
         ], repeatRows=1)
     elements.append(t)
+
+    #Add the key
+    elements.append(Spacer(0,30))
+    key = []
+    key.append([Paragraph("Sample ID",
+            stylesheet['BodyText']),
+        Paragraph("The sample ID as provided to the sequencer in the sample sheet. This may not match the final file name, but will match the directory in which it's held.", 
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Barcode",
+            stylesheet['BodyText']),
+        Paragraph("The sample barcode added by the sequencing facility (or you, if you created the libraries yourself). This will generally be 6 nucleotides long.",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Lane", 
+            stylesheet['BodyText']),
+        Paragraph("The lane number on the flow cell (there are 8 of them).",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("# Reads", 
+            stylesheet['BodyText']),
+        Paragraph("The number of reads in a given file. For paired-end datasets, this is equivalent to the number of fragments sequenced, rather than summing the counts for read #1 and read #2. Note that this includes only reads passing the quality filter.",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("% Bases >= Q30 Read #1", 
+            stylesheet['BodyText']),
+        Paragraph("The percentage of bases in read #1 of a pair having a Phred-scaled score of at least 30, meaning that the 0.1% or less chance that they're incorrect.",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Ave. Qual. Read #1", 
+            stylesheet['BodyText']),
+        Paragraph("The average Phred-scaled base quality of bases in read #1 of a pair. This number of -10*log10(Probability that the call is incorrect). In other words, if a call is 100% likely to be wrong, the score is 0 (or 10 for 10% likelihood, 20 for 1% likelihood, etc.).",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("% Bases >= Q30 Read #2", 
+            stylesheet['BodyText']),
+        Paragraph("Identical to '% Bases >= Q30 Read #1', but for read #2 of a pair.",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Ave. Qual. Read #2", 
+            stylesheet['BodyText']),
+        Paragraph("Identical to 'Ave. Qual. Read #1', but for read #1 of a pair.",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("# Reads", 
+            stylesheet['BodyText']),
+        Paragraph("Identical to '% Bases >= Q30 Read #1', but for single-end datasets.",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Ave. Qual.", 
+            stylesheet['BodyText']),
+        Paragraph("Identical to 'Ave. Qual. Read #1', but for single-end datasets.",
+            stylesheet['BodyText'])])
+    t2 = Table(key, colWidths=(80, None))
+    t2.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
+    elements.append(t2)
 
     pdf.addPageTemplates([PageTemplate(id="FirstPage", frames=[fTL, fTR, fB]),
         PageTemplate(id="RemainingPages", frames=[fM])]),
@@ -213,7 +262,6 @@ def finishedEmail(config, msg, runTime) :
     message += "Run time: %s\n" % runTime
     message += msg
 
-    print(message)
     msg = MIMEText(message)
     msg['Subject'] = "[bcl2fastq_pipeline] %s processed" % config.get("Options","runID")
     msg['From'] = config.get("Email","fromAddress")

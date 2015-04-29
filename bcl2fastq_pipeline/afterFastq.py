@@ -30,7 +30,8 @@ def FastQC_worker(fname) :
     os.makedirs("%s/%s/FASTQC_%s" % (config.get("Paths","outputDir"),
           config.get("Options","runID"),
           projectName), exist_ok=True)
-    print("[FastQC_worker] Running %s" % cmd)
+    sys.stderr.write("[FastQC_worker] Running %s\n" % cmd)
+    sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)
 
 def toDirs(files) :
@@ -46,7 +47,8 @@ def md5sum_worker(d) :
     oldWd = os.getcwd()
     os.chdir(d)
     cmd = "md5sum */*.fastq.gz > md5sums.txt"
-    print("[md5sum_worker] Processing %s" % d)
+    sys.stderr.write("[md5sum_worker] Processing %s\n" % d)
+    sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 

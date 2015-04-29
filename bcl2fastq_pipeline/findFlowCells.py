@@ -6,6 +6,7 @@ such as marking it as having been processed and sending emails.
 '''
 
 import os
+import sys
 import smtplib
 import glob
 from email.mime.text import MIMEText
@@ -34,12 +35,14 @@ process, then the runID is filled in. Otherwise, that's set to None.
 def newFlowCell(config) :
     dirs = glob.glob("%s/*SN7001180*/RTAComplete.txt" % config.get("Paths","baseDir"))
     for d in dirs :
-        print("checking %s" % d) #DEBUG
+        sys.stderr.write("checking %s\n" % d) #DEBUG
+        sys.stderr.flush()
         #Get the flow cell ID (e.g., 150416_SN7001180_0196_BC605HACXX)
         config.set('Options','runID',d.split("/")[-2])
 
         if(flowCellProcessed(config) is False) :
-            print("Found a new flow cell: %s" % config.get("Options","runID"))
+            sys.stderr.write("Found a new flow cell: %s\n" % config.get("Options","runID"))
+            sys.stderr.flush()
             return config
         else :
             config.set("Options","runID","")
