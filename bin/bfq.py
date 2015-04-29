@@ -61,6 +61,7 @@ while True:
         sleep(config)
         continue
 
+    print(misc.parseConversionStats(config))
     #Get more statistics and create PDFs
     try :
         message += "\n\n"+misc.parseConversionStats(config)
@@ -72,14 +73,15 @@ while True:
 
     runTime = datetime.datetime.now()-startTime
 
-    ##Email finished message
-    #try :
-    misc.finishedEmail(config, message, runTime)
-    #except :
-    #    #Unrecoverable error
-    #    sys.exit("Couldn't send the finished email! Quiting")
+    #Email finished message
+    try :
+        misc.finishedEmail(config, message, runTime)
+    except :
+        #Unrecoverable error
+        sys.exit("Couldn't send the finished email! Quiting")
 
-    #Mark the flow cell as having been processed
-    findFlowCells.markFinished(config)
+    ##Mark the flow cell as having been processed
+    #findFlowCells.markFinished(config)
 
+    #For debugging, remove me!
     break

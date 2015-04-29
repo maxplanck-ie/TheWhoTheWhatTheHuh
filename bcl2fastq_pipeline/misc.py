@@ -8,10 +8,14 @@ import smtplib
 from email.mime.text import MIMEText
 import xml.etree.ElementTree as ET
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer, Image, Frame
+from reportlab.platypus import BaseDocTemplate, Table, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4, landscape
 from time import strftime
+from reportlab.pdfgen import canvas
+
+def FirstPage(canvas, doc) :
+    print("In the first page")
 
 def makeProjectPDF(node, project, config) :
     """
@@ -30,11 +34,15 @@ def makeProjectPDF(node, project, config) :
     Add an image?
     Footer?
     """
-    pdf = SimpleDocTemplate("%s/%s/%s/SequencingReport.pdf" % (
+    pdf = BaseDocTemplate("%s/%s/%s/SequencingReport.pdf" % (
         config.get("Paths","outputDir"),config.get("Options","runID"),
         project), pagesize=A4)
-    f1 = Frame(0, 0, width=5, height=4)
-    f2 = Frame(5, 4, width=5, height=4)
+    topHeight=100 #The image is 86 pixels tall
+    fTL = Frame(pdf.leftMargin, pdf.height, width=pdf.width/2, height=topHeight, id="col1") #Fixed height
+    fTR = Frame(pdf.leftMargin+pdf.width/2, pdf.height, width=pdf.width/2, height=topHeight, id="col2")
+    fB = Frame(pdf.leftMargin, pdf.bottomMargin, pdf.width, pdf.height-topHeight, id="bottom")
+    fM = Frame(pdf.leftMargin, pdf.bottomMargin, pdf.width, pdf.height, id="main")
+    
     elements = []
     PE = False
     if(len(node[0][0][0][0][1]) == 3) :
@@ -60,7 +68,10 @@ def makeProjectPDF(node, project, config) :
     string = "FastQC version: %s" % (config.get("Version","fastQC"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
-    elements.append(Spacer(1,72))
+
+    #Image
+    elements.append(Image("/home/ryan/Downloads/header_image.jpg", hAlign="RIGHT"))
+    elements.append(NextPageTemplate("RemainingPages"))
 
     #Data table
     for sample in node.findall("Sample") :
@@ -100,11 +111,18 @@ def makeProjectPDF(node, project, config) :
                              "%5.2f" % (100*(e[5]/e[4])),
                              "%5.2f" % (e[6]/e[4])
                     ])
-                data.append([e[0],e[1],e[2],e[3],100*(e[5]/e[4]),e[6]/e[4]])
+    #Test page flow
+    for i in range(100) :
+        d = data[len(data)-1]
+        d = [i,d[1],d[2],d[3],d[4],d[5],d[6],d[7]]
+        data.append(d)
     t = Table(data, style=[
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
         ], repeatRows=1)
     elements.append(t)
+
+    pdf.addPageTemplates([PageTemplate(id="FirstPage", frames=[fTL, fTR, fB]),
+        PageTemplate(id="RemainingPages", frames=[fM])]),
     pdf.build(elements)
 
 def getFCmetrics(root) :

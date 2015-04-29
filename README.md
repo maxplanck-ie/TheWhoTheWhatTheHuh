@@ -11,6 +11,8 @@ To Do
  [ ] - Do we ever have the same sample name split across libraries in the same project/flow cell? The current implementation will overwrite the fastqc results for that. A better option might be to make subdirectories within each FASTQC_projectID directory
  [ ] - Combine flowcells/lanes from submission (with our flowcell focus we still have issues if submissions are spread over many flow cells)
  [X] - Per-project PDF files
+ [X] - PDFs should allow graphics and frames
+ [ ] - Graphics should probably be contained in the module
  [ ] - What does DEEP need in addition?
  [ ] - Share stuff to EVA automatically, rather than with `seq_share.sh`
  [ ] - Give some proper documentation above, particularly about postMakeThreads.
