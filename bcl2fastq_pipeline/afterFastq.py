@@ -19,17 +19,19 @@ def FastQC_worker(fname) :
     global localConfig
     config = localConfig
     projectName = fname.split("/")[-3] #It's the penultimate directory
-    #--noextract -f fastq -t 1 -q
-    cmd = "%s %s -o %s/%s/FASTQC_%s %s" % (
+    libName = fname.split("/")[-2] #The last directory
+    cmd = "%s %s -o %s/%s/FASTQC_%s/%s %s" % (
           config.get("FastQC","fastqc_command"),
           config.get("FastQC","fastqc_options"),
           config.get("Paths","outputDir"),
           config.get("Options","runID"),
           projectName,
+          libName,
           fname)
-    os.makedirs("%s/%s/FASTQC_%s" % (config.get("Paths","outputDir"),
+    os.makedirs("%s/%s/FASTQC_%s/%s" % (config.get("Paths","outputDir"),
           config.get("Options","runID"),
-          projectName), exist_ok=True)
+          projectName,
+          libName), exist_ok=True)
     sys.stderr.write("[FastQC_worker] Running %s\n" % cmd)
     sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)

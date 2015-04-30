@@ -24,8 +24,8 @@ The general workflow of this pipeline is as follows:
   * Note that having insufficient space will lead to an email being sent to addresses set in `[Email]`->`errorTo`. The program will then sleep (see step 3) and loop (i.e., go back to step 1).
 5. Assuming there is at least one new flow cell and there's sufficient space, the program will generate fastq files.
   1. The program specified via `[bcl2fastq]`->`bcl2fastq` is run with options specified in `[bcl2fastq]`->`bcl2fastq_options`. In addition to these options, the follow are hard coded:
-    1. `-o outputDir/runID`: The output directory is set to `[Paths]`->`outputDir`/runID. This directory is created if it doesn't already exist.
-    2. `-r runDir/runID`: This is the directory that's being processed (`[Paths]`->`runDir`/runID).
+    1. `-o outputDir/runID`: The output directory is set to `[Paths]`->`outputDir/runID`. This directory is created if it doesn't already exist.
+    2. `-r runDir/runID`: This is the directory that's being processed (`[Paths]`->`runDir`/`runID`).
       * This directory may be read only!
     3. `--interop-dir seqFacDir/runID/InterOp`: This prevents `bcl2fastq` from attempting to write to the running directory, which could be dangerous. See `[Paths]`->`seqFacDir` for where this is.
       * The sequencing facility has requested this directory. Note that the path will be created if it doesn't already exist.
@@ -33,8 +33,8 @@ The general workflow of this pipeline is as follows:
   1. FastQC is run on each output fastq file.
     * This is run in a multithreaded manner, see `[Options]`->`postMakeThreads` for the number of workers.
     * See options under `[FastQC]` for executable paths and options.
-    * The output is placed in `[Paths]`->`outputDir`/runID/FASTQC_project_name.
-  2. An md5sum is made of the fastq files in each project.
+    * The output is placed in `[Paths]`->`outputDir`/`runID`/FASTQC_project_name.
+  2. An md5sum is made of the fastq files in each project (see the file named "md5sums.txt").
     * As with FastQC, this is multithreaded, with the number of workers threads set via `[Options]`->`postMakeThreads`.
   3. Additional steps can be added to `afterFastq.py`, though note that the package will need to be reinstalled and the process restarted.
 7. Xml files and FastQC outputs are copied to a location readable by the sequencing facility.
@@ -49,7 +49,7 @@ The general workflow of this pipeline is as follows:
 Configuration file
 ==================
 The configuration file is a human readable text file named `bcl2fastq.ini` and must be placed in the home directory (`~/`) of the user running this package. Currently, the file has the following sections:
-  * [Paths] - Holds all path information
+  * `[Paths]` - Holds all path information
     * `baseDir` - The base directory where the HiSeq writes its output
     * `outputDir` - The base directory where the demultiplexed fastq files and fastQC/md5sum output should be written.
     * `seqFacDir` - The base directory readable by the sequencing facility, for the files they're interested in.
@@ -79,7 +79,7 @@ A few general notes are in order:
   * Comments need to be on separate lines and can be preceded by either `#` or `;`.
   * The order of things doesn't matter.
   * Quotes should not be used! `fastqc=/usr/bin/fastqc` is not the same as `fastqc="/usr/bin/fastqc"`!
-  * All mentioned setting *must* be present! There's currently no method to support skipping steps if a line is blank or absent!
+  * All mentioned settings **must** be present! There's currently no method to support skipping steps if a line is blank or absent!
 
 Dependencies
 ============
@@ -94,8 +94,11 @@ This package has the following dependencies:
 
 To Do
 =====
- - [ ] Do we ever have the same sample name split across libraries in the same project/flow cell? The current implementation will overwrite the fastqc results for that. A better option might be to make subdirectories within each FASTQC_projectID directory
- - [ ] Combine flowcells/lanes from submission (with our flowcell focus we still have issues if submissions are spread over many flow cells)
+ - [ ] Remove remnant debugging steps.
+ - [ ] Combine samples in the same library across flow cells?
+ - [ ] Automatically distribute processed samples.
+ - [X] Handle identically named samples within the same project that are made with different libraries (in case this ever happens).
+ - [X] Possibly reformat the output PDF files to include both the sample ID (i.e., library) and sample name, since the latter is likey what's tracked by the end user.
  - [X] Per-project PDF files
  - [X] PDFs should allow graphics and frames
  - [X] Graphics should probably be contained in the module

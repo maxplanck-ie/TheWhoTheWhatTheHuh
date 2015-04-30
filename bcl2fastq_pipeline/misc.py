@@ -13,6 +13,41 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4, landscape
 from time import strftime
 from reportlab.pdfgen import canvas
+import csv
+import sys
+
+def getSampleIDNameProjectLaneTuple(config) :
+    """
+    Parse a sample sheet to get a tuple of:
+      * Sample ID
+      * Sample Name
+      * Lane
+      * Project Name
+    This can then be used in the project PDFs
+    """
+    samples = []
+    inBottom = False
+    for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r")) :
+        if(inBottom) :
+            samples.append([line[1],line[2],line[0],line[7]])
+        else :
+            if(line[0] == "Lane") :
+                inBottom = True
+    if(inBottom is False) :
+        sys.stderr.write("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
+        sys.stderr.flush()
+        return None
+    return samples
+
+def getSampleName(sampleTuple, project, lane, sampleID) :
+    if(sampleTuple is None) :
+        return " "
+    for item in sampleTuple :
+        if(sampleID == item[0] and
+            lane == item[2] and
+            project == item[3]) :
+            return item[1]
+    return " "
 
 def makeProjectPDF(node, project, config) :
     """
@@ -27,12 +62,13 @@ def makeProjectPDF(node, project, config) :
       * Average base quality
     For paired-end datasets, the last two columns are repeated and named differently.
     """
+    st = getSampleIDNameProjectLaneTuple(config)
+
     stylesheet=getSampleStyleSheet()
-    #stylesheet.add(ParagraphStyle(name="fixed", parent=stylesheet['Normal'], fontName="Courier", spaceBefore=10))
 
     pdf = BaseDocTemplate("%s/%s/%s/SequencingReport.pdf" % (
         config.get("Paths","outputDir"),config.get("Options","runID"),
-        project), pagesize=A4)
+        project), pagesize=landscape(A4))
     topHeight=100 #The image is 86 pixels tall
     fTL = Frame(pdf.leftMargin, pdf.height, width=pdf.width/2, height=topHeight, id="col1") #Fixed height
     fTR = Frame(pdf.leftMargin+pdf.width/2, pdf.height, width=pdf.width/2, height=topHeight, id="col2")
@@ -43,15 +79,18 @@ def makeProjectPDF(node, project, config) :
     PE = False
     if(len(node[0][0][0][0][1]) == 3) :
         PE = True
-        data = [["Sample ID","Barcode","Lane","# Reads","% Bases\n>= Q30\nRead #1","Ave. Qual.\nRead #1","% Bases\n>= Q30\nRead #2","Ave. Qual.\nRead #2"]]
+        data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30\nRead #1","Ave. Qual.\nRead #1","% Bases\n>= Q30\nRead #2","Ave. Qual.\nRead #2"]]
     else :
-        data = [["Sample ID","Barcode","Lane","# Reads","% Bases\n>= Q30","Ave. Qual."]]
+        data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30","Ave. Qual."]]
 
     #A text blurb
     string = "Project: %s" % project
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
     string = "Report generated: %s" % (strftime("%d-%m-%Y %H:%M:%S"))
+    p = Paragraph(string, style=stylesheet['Normal'])
+    elements.append(p)
+    string = "Flow cell ID: %s" % (config.get("Options","runID"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
     string = "BCL2Fastq pipeline version: %s" % (config.get("Version","pipeline"))
@@ -103,6 +142,7 @@ def makeProjectPDF(node, project, config) :
                         e[8] += int(tile[1][2][2].text) #Pf->Read2->QualSum
                 if(PE) :
                     data.append([e[0],
+                                 getSampleName(st, project, e[2], e[0]),
                                  e[1],
                                  e[2],
                                  e[3],
@@ -113,6 +153,7 @@ def makeProjectPDF(node, project, config) :
                         ])
                 else :
                     data.append([e[0],
+                                 getSampleName(st, project, e[2], e[0]),
                                  e[1],
                                  e[2],
                                  e[3],
@@ -131,6 +172,10 @@ def makeProjectPDF(node, project, config) :
     key.append([Paragraph("Sample ID",
             stylesheet['BodyText']),
         Paragraph("The sample ID as provided to the sequencer in the sample sheet. This may not match the final file name, but will match the directory in which it's held.", 
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Sample Name",
+            stylesheet['BodyText']),
+        Paragraph("The sample name as provided to the sequencer in the sample sheet. This should match the final file name.",
             stylesheet['BodyText'])])
     key.append([Paragraph("Barcode",
             stylesheet['BodyText']),

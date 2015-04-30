@@ -65,6 +65,7 @@ while True:
         sleep(config)
         continue
 
+    message = misc.parseConversionStats(config)
     #Get more statistics and create PDFs
     try :
         message += "\n\n"+misc.parseConversionStats(config)
@@ -84,8 +85,8 @@ while True:
         #Unrecoverable error
         sys.exit("Couldn't send the finished email! Quiting")
 
-    ##Mark the flow cell as having been processed
-    #findFlowCells.markFinished(config)
+    #Mark the flow cell as having been processed
+    findFlowCells.markFinished(config)
 
     #DEBUGGING!
     break
