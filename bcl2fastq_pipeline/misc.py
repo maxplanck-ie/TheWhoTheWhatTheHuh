@@ -72,7 +72,7 @@ def makeProjectPDF(node, project, config) :
     elements.append(p)
 
     #Image
-    elements.append(Image("/home/ryan/Downloads/header_image.jpg", hAlign="RIGHT"))
+    elements.append(Image(config.get("Options","imagePath"), hAlign="RIGHT"))
     elements.append(NextPageTemplate("RemainingPages"))
 
     #Data table

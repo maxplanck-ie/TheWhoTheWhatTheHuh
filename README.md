@@ -98,7 +98,7 @@ To Do
  - [ ] Combine flowcells/lanes from submission (with our flowcell focus we still have issues if submissions are spread over many flow cells)
  - [X] Per-project PDF files
  - [X] PDFs should allow graphics and frames
- - [ ] Graphics should probably be contained in the module
+ - [X] Graphics should probably be contained in the module
  - [X] Need to not buffer logging information
  - [X] What does DEEP need in addition? Answer: nothing
  - [X] Add an explanation of each column to the PDFs
