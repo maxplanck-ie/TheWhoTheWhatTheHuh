@@ -15,6 +15,48 @@ from time import strftime
 from reportlab.pdfgen import canvas
 import csv
 import sys
+import glob
+import pathlib
+
+def transferData(config) :
+    """
+    Distribute fastq and fastQC files to users.
+    """
+    message = ""
+    projects = glob.glob("%s/%s/FASTQC_*" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    for project in projects :
+        pname = project.split("/")[-1][7:]
+        if(pname[0] == "A") :
+            #Copy
+            group = pname.split("_")[1]
+            sys.stderr.write("[transferData] Transferring %s\n" % pname)
+            sys.stderr.flush()
+            try :
+                p = pathlib.Path("%s/%s/sequencing_data/%s" % (
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID")))
+                p.mkdir(mode=0o770, parents=True)
+                shutil.copytree(project, "%s/%s/sequencing_data/%s/FASTQC_%s" % (
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID"),
+                    pname))
+                shutil.copytree("%s/%s/%s" % (
+                    config.get("Paths","outputDir"),
+                    config.get("Options","runID"),
+                    pname)
+                    , "%s/%s/sequencing_data/%s/%s" % (
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID"),
+                    pname))
+                message += "\n%s\ttransferred" % pname
+            except :
+                message += "\n%s\tError during transfer!" % pname
+        else :
+            message += "\n%s\tskipped" % pname
+    return message
 
 def getSampleIDNameProjectLaneTuple(config) :
     """
@@ -302,9 +344,10 @@ def errorEmail(config, msg) :
     s.send_message(msg)
     s.quit()
 
-def finishedEmail(config, msg, runTime) :
+def finishedEmail(config, msg, runTime, transferTime) :
     message = "Flow cell: %s\n" % config.get("Options","runID")
     message += "Run time: %s\n" % runTime
+    message += "Data transfer: %s\n" % transferTime
     message += msg
 
     msg = MIMEText(message)

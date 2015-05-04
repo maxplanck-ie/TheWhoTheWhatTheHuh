@@ -42,9 +42,12 @@ The general workflow of this pipeline is as follows:
   * Currently, the xml files are `RunInfo.xml` and `runParameters.xml`.
 8. A summary PDF file is created for each of the projects. All of the metrics from this are gathered from `Stats/ConversionStats.xml`.
   * Everything about these PDFs is hard-coded. In an ideal world, this would have some sort of plugin interface.
-9. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
+9. FastQC and fastq files are copied to the group directories, under `sequencing_data/`.
+  * If the directories already exist then an error is produced. This is to ensure that nothing is inadvertently over-written!
+  * Only projects starting with the letter "A" will be distributed.
+10. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
   * Note the other options under `[Email]`, which specify the host name of the outgoing email server and the outgoing email address.
-10. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
+11. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
 
 Configuration file
 ==================
@@ -53,6 +56,7 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
     * `baseDir` - The base directory where the HiSeq writes its output
     * `outputDir` - The base directory where the demultiplexed fastq files and fastQC/md5sum output should be written.
     * `seqFacDir` - The base directory readable by the sequencing facility, for the files they're interested in.
+    * `groupDir` - The base directory holding all group's datasets (currently, this should be `/data` for us).
   * `[FastQC]`
     * `fastqc_command` - Either just `fastqc` or possibly the full path, as appropriate.
     * `fastqc_options` - Options for fastqc
@@ -94,9 +98,9 @@ This package has the following dependencies:
 
 To Do
 =====
- - [ ] Remove remnant debugging steps.
  - [ ] Combine samples in the same library across flow cells?
- - [ ] Automatically distribute processed samples.
+ - [ ] Remove remnant debugging steps.
+ - [X] Automatically distribute processed samples.
  - [X] Handle identically named samples within the same project that are made with different libraries (in case this ever happens).
  - [X] Possibly reformat the output PDF files to include both the sample ID (i.e., library) and sample name, since the latter is likey what's tracked by the end user.
  - [X] Per-project PDF files

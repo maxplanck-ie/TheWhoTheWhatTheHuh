@@ -65,7 +65,6 @@ while True:
         sleep(config)
         continue
 
-    message = misc.parseConversionStats(config)
     #Get more statistics and create PDFs
     try :
         message += "\n\n"+misc.parseConversionStats(config)
@@ -77,10 +76,23 @@ while True:
         continue
 
     runTime = datetime.datetime.now()-startTime
+    startTime = datetime.datetime.now()
+
+    #Transfer data to groups
+    try : 
+        message += misc.transferData(config)
+    except :
+        sys.stderr.write("Got an error during distributeData\n")
+        sys.stderr.flush()
+        misc.errorEmail(config, "Got an error during distributeData")
+        sleep(config)
+        continue
+
+    transferTime = datetime.datetime.now()-startTime
 
     #Email finished message
     try :
-        misc.finishedEmail(config, message, runTime)
+        misc.finishedEmail(config, message, runTime, transferTime)
     except :
         #Unrecoverable error
         sys.exit("Couldn't send the finished email! Quiting")
