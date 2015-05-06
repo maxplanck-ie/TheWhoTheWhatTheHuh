@@ -54,6 +54,29 @@ def transferData(config) :
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
+        else if(pname[0] == "C") :
+            sys.stderr.write("[transferData] Transferring %s\n" % pname)
+            sys.stderr.flush()
+            try :
+                p = pathlib.Path("%s/sequencing_data/%s" % (
+                    config.get("Paths","DEEPDir"),
+                    config.get("Options","runID")))
+                p.mkdir(mode=0o770, parents=True)
+                shutil.copytree(project, "%s/sequencing_data/%s/FASTQC_%s" % (
+                    config.get("Paths","DEEPDir"),
+                    config.get("Options","runID"),
+                    pname))
+                shutil.copytree("%s/%s/%s" % (
+                    config.get("Paths","outputDir"),
+                    config.get("Options","runID"),
+                    pname)
+                    , "%s/sequencing_data/%s/%s" % (
+                    config.get("Paths","DEEPDir"),
+                    config.get("Options","runID"),
+                    pname))
+                message += "\n%s\ttransferred" % pname
+            except :
+                message += "\n%s\tError during transfer!" % pname
         else :
             message += "\n%s\tskipped" % pname
     return message
