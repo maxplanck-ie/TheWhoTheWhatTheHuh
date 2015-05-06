@@ -44,7 +44,7 @@ The general workflow of this pipeline is as follows:
     * Everything about these PDFs is hard-coded. In an ideal world, this would have some sort of plugin interface.
   9. FastQC and fastq files are copied to the group directories, under `sequencing_data/`.
     * If the directories already exist then an error is produced. This is to ensure that nothing is inadvertently over-written!
-    * Only projects starting with the letter "A" will be distributed.
+    * Only projects starting with the letters "A" or "C" will be distributed. Those starting with "A" are distributed to the groups and those with "C" to Andreas (`[Paths]->DEEPDir`).
   10. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
     * Note the other options under `[Email]`, which specify the host name of the outgoing email server and the outgoing email address.
   11. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
@@ -57,6 +57,7 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
     * `outputDir` - The base directory where the demultiplexed fastq files and fastQC/md5sum output should be written.
     * `seqFacDir` - The base directory readable by the sequencing facility, for the files they're interested in.
     * `groupDir` - The base directory holding all group's datasets (currently, this should be `/data` for us).
+    * `DEEPDir` - The base directory holding all DEEP datasets.
   * `[FastQC]`
     * `fastqc_command` - Either just `fastqc` or possibly the full path, as appropriate.
     * `fastqc_options` - Options for fastqc
