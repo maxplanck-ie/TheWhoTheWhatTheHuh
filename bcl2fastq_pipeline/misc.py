@@ -7,7 +7,7 @@ import shutil
 import smtplib
 from email.mime.text import MIMEText
 import xml.etree.ElementTree as ET
-from reportlab.lib import colors
+from reportlab.lib import colors, utils
 from reportlab.platypus import BaseDocTemplate, Table, Preformatted, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate, TableStyle
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4, landscape
@@ -176,7 +176,11 @@ def makeProjectPDF(node, project, config) :
     elements.append(p)
 
     #Image
-    elements.append(Image(config.get("Options","imagePath"), hAlign="RIGHT"))
+    #Scale things
+    img = utils.ImageReader(config.get("Options","imagePath"))
+    iw, ih = img.getSize()
+    iw = 0.88*iw*topHeight/ih
+    elements.append(Image(config.get("Options","imagePath"), width=iw, height=0.88*topHeight, hAlign="RIGHT"))
     elements.append(NextPageTemplate("RemainingPages"))
 
     #Data table
