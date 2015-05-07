@@ -6,6 +6,32 @@ import os
 import sys
 import shutil
 import glob
+import csv
+
+def reformatSampleSheet(config) :
+    '''
+    I have no idea why the sample sheet that's input into the machine doesn't match
+    what's being expected by Illumina's software. It works with the newer bcl2fastq
+    software, but not the older stuff.
+    '''
+    newSS = open("%s/%s/SampleSheet.csv" % (config.get("Paths","outputDir"),config.get("Options","runID")), "w")
+    newSS.write("FCID,Lane,SampleID,SampleRef,Index,Description,Control,Recipe,Operator,SampleProject\n")
+    inLane=False
+    FCID = config.get("Options","runID").split("_")[-1][1:]
+    for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r")) :
+        if(inLane) :
+            newSS.write("%s,%s,%s,,%s,%s,N,,,%s\n" % (
+              FCID,
+              line[0],
+              line[1],
+              line[6],
+              line[8],
+              line[7]
+            ))
+        else :
+            if(line[0] == "Lane") :
+                inLane=True
+    newSS.close()
 
 def bcl2fq(config) :
     '''
@@ -19,15 +45,24 @@ def bcl2fq(config) :
     #Make the output directories
     os.makedirs("%s/%s" % (config.get("Paths","outputDir"),config.get("Options","runID")), exist_ok=True)
     os.makedirs("%s/%s/InterOp" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), exist_ok=True)
-    cmd = "%s %s -o %s/%s -R %s/%s --interop-dir %s/%s/InterOp" % (
-        config.get("bcl2fastq","bcl2fastq"),
-        config.get("bcl2fastq","bcl2fastq_options"),
+    reformatSampleSheet(config)
+    cmd = "%s %s -o %s/%s --input-dir %s/%s/Data/Intensities/BaseCalls --sample-sheet %s/%s/SampleSheet.csv" % (
+        config.get("bcl2fastq","configure"),
+        config.get("bcl2fastq","configure_options"),
         config.get("Paths","outputDir"),
         config.get("Options","runID"),
         config.get("Paths","baseDir"),
         config.get("Options","runID"),
-        config.get("Paths","seqFacDir"),
+        config.get("Paths","outputDir"),
         config.get("Options","runID")
+    )
+    sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
+    sys.stderr.flush()
+    subprocess.check_call(cmd, shell=True)
+    cmd = "cd %s/%s && make -j %s" % (
+        config.get("Paths","outputDir"),
+        config.get("Options","runID"),
+        config.get("bcl2fastq","make_threads")
     )
     sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
     sys.stderr.flush()

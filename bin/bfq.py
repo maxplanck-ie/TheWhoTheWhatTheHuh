@@ -45,60 +45,60 @@ while True:
         sleep(config)
         continue
 
-    #Run post-processing steps
-    try :
-        message = afterFastq.postMakeSteps(config)
-    except :
-        sys.stderr.write("Got an error during postMakeSteps\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error during postMakeSteps")
-        sleep(config)
-        continue
+    ##Run post-processing steps
+    #try :
+    #    message = afterFastq.postMakeSteps(config)
+    #except :
+    #    sys.stderr.write("Got an error during postMakeSteps\n")
+    #    sys.stderr.flush()
+    #    misc.errorEmail(config, sys.exc_info(), "Got an error during postMakeSteps")
+    #    sleep(config)
+    #    continue
 
-    #Copy over xml and FastQC stuff
-    try:
-        makeFastq.cpSeqFac(config)
-    except :
-        sys.stderr.write("Got an error in cpSeqFac\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
-        sleep(config)
-        continue
+    ##Copy over xml and FastQC stuff
+    #try:
+    #    makeFastq.cpSeqFac(config)
+    #except :
+    #    sys.stderr.write("Got an error in cpSeqFac\n")
+    #    sys.stderr.flush()
+    #    misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
+    #    sleep(config)
+    #    continue
 
-    #Get more statistics and create PDFs
-    try :
-        message += "\n\n"+misc.parseConversionStats(config)
-    except :
-        sys.stderr.write("Got an error during parseConversionStats\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error during parseConversionStats")
-        sleep(config)
-        continue
+    ##Get more statistics and create PDFs
+    #try :
+    #    message += "\n\n"+misc.parseConversionStats(config)
+    #except :
+    #    sys.stderr.write("Got an error during parseConversionStats\n")
+    #    sys.stderr.flush()
+    #    misc.errorEmail(config, sys.exc_info(), "Got an error during parseConversionStats")
+    #    sleep(config)
+    #    continue
 
-    runTime = datetime.datetime.now()-startTime
-    startTime = datetime.datetime.now()
+    #runTime = datetime.datetime.now()-startTime
+    #startTime = datetime.datetime.now()
 
-    #Transfer data to groups
-    try : 
-        message += misc.transferData(config)
-    except :
-        sys.stderr.write("Got an error during distributeData\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
-        sleep(config)
-        continue
+    ##Transfer data to groups
+    #try : 
+    #    message += misc.transferData(config)
+    #except :
+    #    sys.stderr.write("Got an error during distributeData\n")
+    #    sys.stderr.flush()
+    #    misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
+    #    sleep(config)
+    #    continue
 
-    transferTime = datetime.datetime.now()-startTime
+    #transferTime = datetime.datetime.now()-startTime
 
-    #Email finished message
-    try :
-        misc.finishedEmail(config, message, runTime, transferTime)
-    except :
-        #Unrecoverable error
-        sys.exit("Couldn't send the finished email! Quiting")
+    ##Email finished message
+    #try :
+    #    misc.finishedEmail(config, message, runTime, transferTime)
+    #except :
+    #    #Unrecoverable error
+    #    sys.exit("Couldn't send the finished email! Quiting")
 
-    #Mark the flow cell as having been processed
-    findFlowCells.markFinished(config)
+    ##Mark the flow cell as having been processed
+    #findFlowCells.markFinished(config)
 
     #DEBUGGING!
     break
