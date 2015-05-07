@@ -29,7 +29,7 @@ while True:
     if(misc.enoughFreeSpace(config) == False) :
         sys.stderr.write("Error: insufficient free space!\n")
         sys.stderr.flush()
-        misc.errorEmail(config,"Error: insufficient free space!")
+        misc.errorEmail(config, sys.exc_info(), "Error: insufficient free space!")
         sleep(config)
         continue
 
@@ -41,7 +41,7 @@ while True:
     except :
         sys.stderr.write("Got an error in bcl2fq\n")
         sys.stderr.flush()
-        misc.errorEmail(config,"Got an error in bcl2fq")
+        misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
         sleep(config)
         continue
 
@@ -51,7 +51,7 @@ while True:
     except :
         sys.stderr.write("Got an error during postMakeSteps\n")
         sys.stderr.flush()
-        misc.errorEmail(config, "Got an error during postMakeSteps")
+        misc.errorEmail(config, sys.exc_info(), "Got an error during postMakeSteps")
         sleep(config)
         continue
 
@@ -61,7 +61,7 @@ while True:
     except :
         sys.stderr.write("Got an error in cpSeqFac\n")
         sys.stderr.flush()
-        misc.errorEmail(config,"Got an error in cpSeqFac")
+        misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
         sleep(config)
         continue
 
@@ -71,7 +71,7 @@ while True:
     except :
         sys.stderr.write("Got an error during parseConversionStats\n")
         sys.stderr.flush()
-        misc.errorEmail(config, "Got an error during parseConversionStats")
+        misc.errorEmail(config, sys.exc_info(), "Got an error during parseConversionStats")
         sleep(config)
         continue
 
@@ -84,7 +84,7 @@ while True:
     except :
         sys.stderr.write("Got an error during distributeData\n")
         sys.stderr.flush()
-        misc.errorEmail(config, "Got an error during distributeData")
+        misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
         sleep(config)
         continue
 

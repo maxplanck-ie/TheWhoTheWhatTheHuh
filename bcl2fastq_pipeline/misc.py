@@ -54,7 +54,7 @@ def transferData(config) :
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
-        else if(pname[0] == "C") :
+        elif(pname[0] == "C") :
             sys.stderr.write("[transferData] Transferring %s\n" % pname)
             sys.stderr.flush()
             try :
@@ -357,8 +357,8 @@ def enoughFreeSpace(config) :
         return True
     return False
 
-def errorEmail(config, msg) :
-    msg = MIMEText(msg)
+def errorEmail(config, errTuple, msg) :
+    msg = MIMEText(msg + "\nError type: %s\nError value: %s\n%s\n" % (errTuple[0], errTuple[1], errTuple[2]))
     msg['Subject'] = "[bcl2fastq_pipeline] Error"
     msg['From'] = config.get("Email","fromAddress")
     msg['To'] = config.get("Email","errorTo")
