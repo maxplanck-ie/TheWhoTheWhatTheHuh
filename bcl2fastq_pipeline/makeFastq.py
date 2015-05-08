@@ -46,6 +46,8 @@ def bcl2fq(config) :
     os.makedirs("%s/%s" % (config.get("Paths","outputDir"),config.get("Options","runID")), exist_ok=True)
     os.makedirs("%s/%s/InterOp" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), exist_ok=True)
     reformatSampleSheet(config)
+    logOut = open("%s/%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
+    logErr = open("%s/%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
     cmd = "%s %s -o %s/%s --input-dir %s/%s/Data/Intensities/BaseCalls --sample-sheet %s/%s/SampleSheet.csv" % (
         config.get("bcl2fastq","configure"),
         config.get("bcl2fastq","configure_options"),
@@ -58,7 +60,7 @@ def bcl2fq(config) :
     )
     sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
     sys.stderr.flush()
-    subprocess.check_call(cmd, shell=True)
+    subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     cmd = "cd %s/%s && make -j %s" % (
         config.get("Paths","outputDir"),
         config.get("Options","runID"),
@@ -66,7 +68,9 @@ def bcl2fq(config) :
     )
     sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
     sys.stderr.flush()
-    subprocess.check_call(cmd, shell=True)
+    subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
+    logOut.close()
+    logErr.close()
 
 def cpSeqFac(config) :
     '''

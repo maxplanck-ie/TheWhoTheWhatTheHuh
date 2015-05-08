@@ -28,7 +28,7 @@ def transferData(config) :
         pname = project.split("/")[-1][7:]
         if(pname[0] == "A") :
             #Copy
-            group = pname.split("_")[1]
+            group = pname.split("_")[2].lower()
             sys.stderr.write("[transferData] Transferring %s\n" % pname)
             sys.stderr.flush()
             try :
@@ -114,7 +114,7 @@ def getSampleName(sampleTuple, project, lane, sampleID) :
             return item[1]
     return " "
 
-def makeProjectPDF(node, project, config) :
+def makeProjectPDF(project, matrix, config) :
     """
     Uses reportlab to generate a per-project PDF file.
 
@@ -131,7 +131,7 @@ def makeProjectPDF(node, project, config) :
 
     stylesheet=getSampleStyleSheet()
 
-    pdf = BaseDocTemplate("%s/%s/%s/SequencingReport.pdf" % (
+    pdf = BaseDocTemplate("%s/%s/Project_%s/SequencingReport.pdf" % (
         config.get("Paths","outputDir"),config.get("Options","runID"),
         project), pagesize=landscape(A4))
     topHeight=100 #The image is 86 pixels tall
@@ -142,8 +142,9 @@ def makeProjectPDF(node, project, config) :
     
     elements = []
     PE = False
-    if(len(node[0][0][0][0][1]) == 3) :
+    if(matrix[0][10]>0) :
         PE = True
+    if(PE) :
         data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30\nRead #1","Ave. Qual.\nRead #1","% Bases\n>= Q30\nRead #2","Ave. Qual.\nRead #2"]]
     else :
         data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30","Ave. Qual."]]
@@ -164,7 +165,7 @@ def makeProjectPDF(node, project, config) :
     string = "bcl2fastq version: %s" % (config.get("Version","bcl2fastq"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
-    readLength = int(int(node[0][0][0][0][0][1][0].text)/int(node[0][0][0][0][0][0].text))
+    readLength = int(matrix[0][12])
     string = "FastQC version: %s" % (config.get("Version","fastQC"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
@@ -184,51 +185,27 @@ def makeProjectPDF(node, project, config) :
     elements.append(NextPageTemplate("RemainingPages"))
 
     #Data table
-    for sample in node.findall("Sample") :
-        e = [None,None,-1,0,0,0,0,0,0]
-        e[0] = sample.get("name")
-        if(e[0] == "all") :
+    for line in matrix :
+        if(project != line[4]) :
             continue
-        for barcode in sample.findall("Barcode") :
-            e[1] = barcode.get("name")
-            if(e[1] == "all") :
-                continue
-            for lane in barcode.findall("Lane") :
-                e[2] = lane.get("number")
-                e[3] = 0
-                e[4] = 0
-                e[5] = 0
-                e[6] = 0
-                e[7] = 0
-                e[8] = 0
-                for tile in lane.findall("Tile") :
-                    e[3] += int(tile[1][0].text) #Pf->ClusterCount
-                    e[4] += int(tile[1][1][0].text) #Pf->Read1->Yield
-                    e[5] += int(tile[1][1][1].text) #Pf->Read1->YieldQ30
-                    e[6] += int(tile[1][1][2].text) #Pf->Read1->QualSum
-                    if(PE) :
-                        e[7] += int(tile[1][2][1].text) #Pf->Read2->YieldQ30
-                        e[8] += int(tile[1][2][2].text) #Pf->Read2->QualSum
-                if(PE) :
-                    data.append([e[0],
-                                 getSampleName(st, project, e[2], e[0]),
-                                 e[1],
-                                 e[2],
-                                 e[3],
-                                 "%5.2f" % (100*(e[5]/e[4])),
-                                 "%5.2f" % (e[6]/e[4]),
-                                 "%5.2f" % (100*(e[7]/e[4])),
-                                 "%5.2f" % (e[8]/e[4])
-                        ])
-                else :
-                    data.append([e[0],
-                                 getSampleName(st, project, e[2], e[0]),
-                                 e[1],
-                                 e[2],
-                                 e[3],
-                                 "%5.2f" % (100*(e[5]/e[4])),
-                                 "%5.2f" % (e[6]/e[4])
-                        ])
+        if(line[10]>0) :
+            data.append([line[1],
+                line[2],
+                line[3],
+                line[0],
+                line[6],
+                "%5.2f" % (100*(line[8]/line[7])),
+                "%5.2f" % (line[10]/line[7]),
+                "%5.2f" % (100*(line[9]/line[7])),
+                "%5.2f" % (line[11]/line[7])])
+        else : 
+            data.append([line[1],
+                line[2],
+                line[3],
+                line[0],
+                line[6],
+                "%5.2f" % (100*(line[8]/line[7])),
+                "%5.2f" % (line[10]/line[7])])
 
     t = Table(data, style=[
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
@@ -290,66 +267,110 @@ def makeProjectPDF(node, project, config) :
         PageTemplate(id="RemainingPages", frames=[fM])]),
     pdf.build(elements)
 
-def getFCmetrics(root) :
-    barcode = root[0][0] #Sample "all", barcode "all"
+def getID(matrix, lane, sampleID, barcode) :
+    idx = 0
+    for row in matrix :
+        if(row[0] == lane and row[1] == sampleID and row[3] == barcode) :
+            return idx
+        idx+=1
+    return None
+
+def getFCmetrics(root, matrix) :
+    for lane in root.findall("Lane") :
+        lnum = lane.get("index")
+        for sample in lane.findall("Sample") :
+            sampleID = sample.get("index")
+            for barcode in sample.findall("Barcode") :
+                BC = barcode.get("index")
+                idx = getID(matrix, lnum, sampleID, BC)
+                if idx is None:
+                    continue
+                for tile in barcode.findall("Tile") :
+                    matrix[idx][5] += int(tile[0][0][2].text) #clusterCount
+                    matrix[idx][6] += int(tile[0][1][2].text) #clusterCountPass
+                    matrix[idx][7] += int(tile[0][1][0].text) #baseYield #1
+                    matrix[idx][8] += int(tile[0][1][1].text) #baseYieldQ30 #1
+                    matrix[idx][10] += int(tile[0][1][5].text) #QualSum #1
+                    matrix[idx][12] = int(tile[0][1][0].text)/int(tile[0][1][2].text) #rlen #1
+                    if(len(tile) > 1) :
+                        matrix[idx][9] += int(tile[1][1][1].text) #baseYieldQ30 #2
+                        matrix[idx][11] += int(tile[1][1][5].text) #QualSum #2
+    return matrix
+
+def getFCLaneMetrics(root) :
     message = "Lane\t# Clusters (% pass)\t% Bases >=Q30\tAve. base qual.\n"
-    for lane in barcode.findall("Lane") :
-        message += "Lane %s" % lane.get("number")
+    for lane in root.findall("Lane") :
+        lnum = lane.get("index")
         clusterCount = 0
         clusterCountPass = 0
         baseYield = [0,0]
         baseYieldQ30 = [0,0]
         QualSum = [0,0]
-        rlens=[0,0]
-        for tile in lane :
-            clusterCount += int(tile[0][0].text)
-            clusterCountPass += int(tile[1][0].text)
-            #Yield
-            baseYield[0] += int(tile[1][1][0].text)
-            if(len(tile[1]) == 3) :
-                baseYield[1] += int(tile[1][2][0].text)
-            #YieldQ30
-            baseYieldQ30[0] += int(tile[1][1][1].text)
-            if(len(tile[1]) == 3) :
-                baseYieldQ30[1] += int(tile[1][2][1].text)
-            #QualSum
-            QualSum[0] += int(tile[1][1][2].text)
-            if(len(tile[1]) == 3) :
-                QualSum[1] += int(tile[1][2][2].text)
-        #Number of clusters (%passing filter)
+        rlens = [0,0]
+        for sample in lane.findall("Sample") :
+            sampleID = sample.get("index")
+            for barcode in sample.findall("Barcode") :
+                BC = barcode.get("index")
+                if(BC == "Undetermined") :
+                    continue
+                for tile in barcode.findall("Tile") :
+                    clusterCount += int(tile[0][0][2].text) #clusterCount
+                    clusterCountPass += int(tile[0][1][2].text) #clusterCountPass
+                    baseYield[0] += int(tile[0][1][0].text) #baseYield #1
+                    baseYieldQ30[0] += int(tile[0][1][1].text) #baseYieldQ30 #1
+                    QualSum[0] += int(tile[0][1][5].text) #QualSum #1
+                    rlens[0] = int(tile[0][1][0].text)/int(tile[0][1][2].text) #rlen #1
+                    if(len(tile) > 1) :
+                        baseYield[1] += int(tile[1][1][0].text) #baseYield #2
+                        baseYieldQ30[1] += int(tile[1][1][1].text) #baseYieldQ30 #2
+                        QualSum[1] += int(tile[1][1][5].text) #QualSum #2
+                        rlens[1] = baseYield[1]/clusterCountPass 
+        message += "Lane %s" % lnum
         message += "\t%i (%5.2f%%)" % (clusterCount,100*clusterCountPass/clusterCount)
-        #%bases above Q30
-        if(baseYield[1] > 0) :
+        if(baseYieldQ30[1]>0) :
             message += "\t%5.2f%%/%5.2f%%" % (100*(baseYieldQ30[0]/baseYield[0]),
                 100*(baseYieldQ30[1]/baseYield[1]))
+            message += "\t%4.1f/%4.1f\n" % (QualSum[0]/baseYield[0],
+                QualSum[1]/baseYield[1])
         else :
             message += "\t%5.2f%%" % (100*(baseYieldQ30[0]/baseYield[0]))
-        #Average base quality
-        if(baseYield[1] > 0) :
-            message += "\t%4.1f/%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount),
-                QualSum[1]/clusterCountPass/(baseYield[1]/clusterCount))
-        else :
-            message += "\t%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount))
-
+            message += "\t%4.1f\n" % (QualSum[0]/baseYield[0])
     return message
 
 def parseConversionStats(config) :
     """
-    Parse ConversionStats.xml, producing:
+    The file name hasn't really beem changed from the bcl2fastq2 version.
+    This actually creates a per-project PDF file by parsing Flowcell_demux_summary.xml
      1) A PDF file for each project
      2) A message that will be included in the email message
     """
-    tree = ET.parse("%s/%s/Stats/ConversionStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID")))
-    root = tree.getroot()[0] #We only ever have a single flow cell
-    #Per-project PDF files
-    for project in root.findall("Project") :
-        if(project.get("name") == "default") :
-            continue
-        if(project.get("name") == "all") :
-            metrics = getFCmetrics(project)
+    #Make an array of tuples to hold the metrics
+    matrix = []
+    inLane=False
+    projects = set()
+    for line in open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r") :
+        line = line.strip().split(",")
+        if(inLane) :
+            #Lane, SampleID, SampleName, Barcode, Project,
+            #clusterCount, clusterCountPass, baseYield*2,
+            #baseYieldQ30*2, QualSum*2, rlens*2
+            matrix.append([line[0],line[1],line[2],line[6],line[7], 0,0,0,0,0,0,0,0,0,0])
+            if line[7] not in projects :
+                projects.add(line[7])
         else :
-            makeProjectPDF(project, project.get("name"), config)
-    return metrics
+            if(line[0] == "Lane") :
+                inLane = True
+        
+    FCID = config.get("Options","runID").split("_")[-1][1:]
+    tree = ET.parse("%s/%s/Basecall_Stats_%s/Flowcell_demux_summary.xml" % (config.get("Paths","outputDir"),config.get("Options","runID"), FCID))
+    root = tree.getroot()
+    matrix = getFCmetrics(root, matrix)
+    
+    #Per-project PDF files
+    for project in projects :
+        makeProjectPDF(project, matrix, config)
+
+    return getFCLaneMetrics(root)
 
 def enoughFreeSpace(config) :
     """
@@ -377,6 +398,7 @@ def finishedEmail(config, msg, runTime, transferTime) :
     message += "Data transfer: %s\n" % transferTime
     message += msg
 
+    sys.stderr.write(message)
     msg = MIMEText(message)
     msg['Subject'] = "[bcl2fastq_pipeline] %s processed" % config.get("Options","runID")
     msg['From'] = config.get("Email","fromAddress")

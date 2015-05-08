@@ -54,47 +54,38 @@ def md5sum_worker(d) :
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 
-def parserDemultiplexStats(config) :
+def parseFlowcell_demux_summary(config) :
     '''
-    Parse DemultiplexingStats.xml under outputDir/Stats/ to get the
+    Parse Basecall_Stats_XXX/Flowcell_demux_summary.xml to get the
     number/percent of undetermined indices.
 
     In particular, we extract the BarcodeCount values from Project "default"
     Sample "all" and Project "all" Sample "all", as the former gives the total
     undetermined and the later simply the total clusters
     '''
-    totals = [0,0,0,0,0,0,0,0]
+    determined = [0,0,0,0,0,0,0,0]
     undetermined = [0,0,0,0,0,0,0,0]
-    tree = ET.parse("%s/%s/Stats/DemultiplexingStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    FCID = config.get("Options","runID").split("_")[-1][1:]
+    tree = ET.parse("%s/%s/Basecall_Stats_%s/Flowcell_demux_summary.xml" % (config.get("Paths","outputDir"),config.get("Options","runID"), FCID))
     root = tree.getroot()
-    for child in root[0].findall("Project") :
-        if(child.get("name") == "default") :
-            break
-    for sample in child.findall("Sample") :
-        if(sample.get("name") == "all") :
-            break
-    child = sample[0] #Get inside Barcode
-    for lane in child.findall("Lane") :
-        lnum = int(lane.get("number"))
-        undetermined[lnum-1] += int(lane[0].text)
-
-    for child in root[0].findall("Project") :
-        if(child.get("name") == "all") :
-            break
-    for sample in child.findall("Sample") :
-        if(sample.get("name") == "all") :
-            break
-    child = sample[0] #Get Inside Barcode
-    for lane in child.findall("Lane") :
-        lnum = int(lane.get("number"))
-        totals[lnum-1] += int(lane[0].text)
+    for lane in root.findall("Lane") :
+        lnum = int(lane.get("index"))-1
+        for sample in lane.findall("Sample") :
+            for barcode in sample.findall("Barcode") :
+                if(barcode.get("index") == "Undetermined") :
+                    for tile in barcode.findall("Tile") :
+                        undetermined[lnum] += int(tile[0][1][2].text) #Read 1->Pf->ClusterCount
+                else :
+                    for tile in barcode.findall("Tile") :
+                        determined[lnum] += int(tile[0][1][2].text) #Read 1->Pf->ClusterCount
 
     out = ""
     for i in range(8) :
-        if(totals[i] == 0) :
+        if(determined[i]+undetermined[i] == 0) :
             continue
         out += "\nLane %i: %i of %i reads/pairs had undetermined indices (%5.2f%%)" % (
-            i+1,undetermined[i],totals[i],100*undetermined[i]/totals[i])
+            i+1,undetermined[i],determined[i]+undetermined[i],
+            100*undetermined[i]/(determined[i]+undetermined[i]))
     return out
 
 #All steps that should be run after `make` go here
@@ -107,9 +98,9 @@ def postMakeSteps(config) :
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
 
-    projectDirs = glob.glob("%s/%s/*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    projectDirs = glob.glob("%s/%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
     projectDirs = toDirs(projectDirs)
-    sampleFiles = glob.glob("%s/%s/*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    sampleFiles = glob.glob("%s/%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     global localConfig
     localConfig = config
 
@@ -128,7 +119,7 @@ def postMakeSteps(config) :
     free /= 1024*1024*1024
 
     #Undetermined indices
-    undeter = parserDemultiplexStats(config)
+    undeter = parseFlowcell_demux_summary(config)
 
     message = "Current free space: %i of %i gigs (%5.2f%%)\n" % (
         free,tot,100*free/tot)
