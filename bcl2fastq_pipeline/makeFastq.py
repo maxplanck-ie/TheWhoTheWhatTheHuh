@@ -7,6 +7,70 @@ import sys
 import shutil
 import glob
 import csv
+import glob
+
+def mergeLanesRename(config) :
+    '''
+    Merge samples that were sequenced on multiple lanes.
+
+    Also, rename files such that they use sample names rather than IDs
+    '''
+    sys.stderr.write("[mergeLanesRename] Merging and renaming samples\n")
+    sys.stderr.flush()
+    inLane=False
+    for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r")) :
+        if(inLane) :
+            #Read1
+            files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_%s_L???_R1_???.fastq.gz" % (
+                 config.get("Paths","outputDir"),
+                 config.get("Options","runID"),
+                 line[7],
+                 line[1],
+                 line[1],
+                 line[6]))
+            if(len(files) == 0) :
+                continue
+            cmd = "cat "
+            cmd2 = "rm "
+            for f in files :
+                cmd += "%s " % f
+                cmd2 += "%s " % f
+            cmd += "> %s/%s/Project_%s/Sample_%s/%s_%s_R1_001.fastq.gz" % (
+                 config.get("Paths","outputDir"),
+                 config.get("Options","runID"),
+                 line[7],
+                 line[1],
+                 line[2],
+                 line[6])
+            subprocess.check_call(cmd, shell=True)
+            subprocess.check_call(cmd2, shell=True)
+            #Read2
+            files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_%s_L???_R2_???.fastq.gz" % (
+                 config.get("Paths","outputDir"),
+                 config.get("Options","runID"),
+                 line[7],
+                 line[1],
+                 line[1],
+                 line[6]))
+            if(len(files) == 0) :
+                continue
+            cmd = "cat "
+            cmd2 = "rm "
+            for f in files :
+                cmd += "%s " % f
+                cmd2 += "%s " % f
+            cmd += "> %s/%s/Project_%s/Sample_%s/%s_%s_R2_001.fastq.gz" % (
+                 config.get("Paths","outputDir"),
+                 config.get("Options","runID"),
+                 line[7],
+                 line[1],
+                 line[2],
+                 line[6])
+            subprocess.check_call(cmd, shell=True)
+            subprocess.check_call(cmd2, shell=True)
+        else :
+            if(line[0] == "Lane") :
+                inLane=True
 
 def reformatSampleSheet(config) :
     '''
@@ -44,7 +108,6 @@ def bcl2fq(config) :
     '''
     #Make the output directories
     os.makedirs("%s/%s" % (config.get("Paths","outputDir"),config.get("Options","runID")), exist_ok=True)
-    os.makedirs("%s/%s/InterOp" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), exist_ok=True)
     reformatSampleSheet(config)
     logOut = open("%s/%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
     logErr = open("%s/%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
@@ -72,12 +135,14 @@ def bcl2fq(config) :
     logOut.close()
     logErr.close()
 
+    #This version of Illumina's software always splits by lane and names according to sampleID
+    mergeLanesRename(config)
+
 def cpSeqFac(config) :
     '''
     Copy over Xml and FastQC files
     '''
     shutil.rmtree("%s/%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), ignore_errors=True)
-    os.makedirs("%s/%s/InterOp" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), exist_ok=True)
     #Xml
     shutil.copy2("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))
     shutil.copy2("%s/%s/runParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))

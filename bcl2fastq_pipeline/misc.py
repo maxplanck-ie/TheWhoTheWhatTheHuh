@@ -26,7 +26,7 @@ def transferData(config) :
     projects = glob.glob("%s/%s/FASTQC_*" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     for project in projects :
         pname = project.split("/")[-1][7:]
-        if(pname[0] == "A") :
+        if(pname[8] == "A") :
             #Copy
             group = pname.split("_")[2].lower()
             sys.stderr.write("[transferData] Transferring %s\n" % pname)
@@ -54,7 +54,7 @@ def transferData(config) :
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
-        elif(pname[0] == "C") :
+        elif(pname[8] == "C") :
             sys.stderr.write("[transferData] Transferring %s\n" % pname)
             sys.stderr.flush()
             try :
@@ -398,7 +398,6 @@ def finishedEmail(config, msg, runTime, transferTime) :
     message += "Data transfer: %s\n" % transferTime
     message += msg
 
-    sys.stderr.write(message)
     msg = MIMEText(message)
     msg['Subject'] = "[bcl2fastq_pipeline] %s processed" % config.get("Options","runID")
     msg['From'] = config.get("Email","fromAddress")
