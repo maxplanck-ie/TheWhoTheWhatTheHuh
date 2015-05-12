@@ -142,7 +142,7 @@ def makeProjectPDF(project, matrix, config) :
     
     elements = []
     PE = False
-    if(matrix[0][10]>0) :
+    if(matrix[0][9]>0) :
         PE = True
     if(PE) :
         data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30\nRead #1","Ave. Qual.\nRead #1","% Bases\n>= Q30\nRead #2","Ave. Qual.\nRead #2"]]
@@ -188,7 +188,7 @@ def makeProjectPDF(project, matrix, config) :
     for line in matrix :
         if(project != line[4]) :
             continue
-        if(line[10]>0) :
+        if(PE) :
             data.append([line[1],
                 line[2],
                 line[3],
