@@ -96,7 +96,7 @@ This package has the following dependencies:
   * Python3 (python2 will explicitly not work, since some package and function names differ).
   * The configparser module
   * The reportlab module
-  * bcl2fastq version 2+
+  * bcl2fastq version 1.8.4 (or newer)
   * FastQC must be present
   * md5sum must be present
   * There must be an available sendmail server somewhere. This package currently does not support authentication, but that could presumably be added.
