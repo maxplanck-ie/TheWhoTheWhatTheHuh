@@ -1,3 +1,5 @@
+For a version supporting bcl2fastq V1 from Illumina, see the "[bcl2fastqV1](https://github.com/maxplanck-ie/bcl2fastq_pipeline/tree/bcl2fastqV1)" branch.
+
 This will be our new bcl to fastq pipeline. Features will include:
 
   * Runs as a background process, rather than a cron job that needs to check if another instance is already running
