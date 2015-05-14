@@ -1,4 +1,4 @@
-This will be our new bcl to fastq pipeline. Features will include:
+This will be our new bcl to fastq pipeline, but using V1 of bcl2fastq from Illumina. Features will include:
 
   * Runs as a background process, rather than a cron job that needs to check if another instance is already running
   * Handles undetermined indices in a more coherent manner
@@ -23,13 +23,13 @@ The general workflow of this pipeline is as follows:
   4. If there are new flow cells to process, ensure that there is sufficient space in `[Paths]`->`outputDir`. This is set in `[Options]`->`minSpace`.
     * Note that having insufficient space will lead to an email being sent to addresses set in `[Email]`->`errorTo`. The program will then sleep (see step 3) and loop (i.e., go back to step 1).
   5. Assuming there is at least one new flow cell and there's sufficient space, the program will generate fastq files.
-    1. The program specified via `[bcl2fastq]`->`bcl2fastq` is run with options specified in `[bcl2fastq]`->`bcl2fastq_options`. In addition to these options, the follow are hard coded:
+    1. The program specified via `[bcl2fastq]`->`configure` is run with options specified in `[bcl2fastq]`->`configure_options`. In addition to these options, the follow are hard coded:
       1. `-o outputDir/runID`: The output directory is set to `[Paths]`->`outputDir/runID`. This directory is created if it doesn't already exist.
-      2. `-r runDir/runID`: This is the directory that's being processed (`[Paths]`->`runDir`/`runID`).
+      2. `--input-dir runDir/runID`: This is the directory that's being processed (`[Paths]`->`runDir`/`runID`).
         * This directory may be read only!
-      3. `--interop-dir seqFacDir/runID/InterOp`: This prevents `bcl2fastq` from attempting to write to the running directory, which could be dangerous. See `[Paths]`->`seqFacDir` for where this is.
-        * The sequencing facility has requested this directory. Note that the path will be created if it doesn't already exist.
-  6. A number of "post make" steps are run. This terminology is a hold-over from the previous bcl2fastq pipeline, which used `make` to generate the fastq files.
+    2. Note that a modified sample sheet is used, since the original one isn't compatible.
+  6. Samples split across lanes are merged together. The resulting files are also renamed to have the sample names provided by the user. The original files are then deleted.
+  7. A number of "post make" steps are run. This terminology is a hold-over from the previous bcl2fastq pipeline, which used `make` to generate the fastq files.
     1. FastQC is run on each output fastq file.
       * This is run in a multithreaded manner, see `[Options]`->`postMakeThreads` for the number of workers.
       * See options under `[FastQC]` for executable paths and options.
@@ -37,17 +37,17 @@ The general workflow of this pipeline is as follows:
     2. An md5sum is made of the fastq files in each project (see the file named "md5sums.txt").
       * As with FastQC, this is multithreaded, with the number of workers threads set via `[Options]`->`postMakeThreads`.
     3. Additional steps can be added to `afterFastq.py`, though note that the package will need to be reinstalled and the process restarted.
-  7. Xml files and FastQC outputs are copied to a location readable by the sequencing facility.
+  8. Xml files and FastQC outputs are copied to a location readable by the sequencing facility.
     * This is location is set via `[Paths]`->`seqFacDir` and things placed under a `runID` subdirectory, as was the case with `InterOp` above.
     * Currently, the xml files are `RunInfo.xml` and `runParameters.xml`.
-  8. A summary PDF file is created for each of the projects. All of the metrics from this are gathered from `Stats/ConversionStats.xml`.
+  9. A summary PDF file is created for each of the projects. All of the metrics from this are gathered from `Stats/ConversionStats.xml`.
     * Everything about these PDFs is hard-coded. In an ideal world, this would have some sort of plugin interface.
-  9. FastQC and fastq files are copied to the group directories, under `sequencing_data/`.
+  10. FastQC and fastq files are copied to the group directories, under `sequencing_data/`.
     * If the directories already exist then an error is produced. This is to ensure that nothing is inadvertently over-written!
     * Only projects starting with the letters "A" or "C" will be distributed. Those starting with "A" are distributed to the groups and those with "C" to Andreas (`[Paths]->DEEPDir`).
-  10. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
+  11. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
     * Note the other options under `[Email]`, which specify the host name of the outgoing email server and the outgoing email address.
-  11. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
+  12. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
 
 Configuration file
 ==================
@@ -58,12 +58,16 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
     * `seqFacDir` - The base directory readable by the sequencing facility, for the files they're interested in.
     * `groupDir` - The base directory holding all group's datasets (currently, this should be `/data` for us).
     * `DEEPDir` - The base directory holding all DEEP datasets.
+    * `logDir` - The directory in which `make` logs are written. Illumina's software can be quite verbose...
   * `[FastQC]`
     * `fastqc_command` - Either just `fastqc` or possibly the full path, as appropriate.
     * `fastqc_options` - Options for fastqc
   * `[bcl2fastq]`
     * `bcl2fastq` - Either just `bcl2fastq` or pissibly the full path, as appropriate.
     * `bcl2fastq_options` - The options for `bcl2fastq`. Something like `--use-bases-mask Y*,I6n,Y* -l WARNING --barcode-mismatches 0 --no-lane-splitting` is recommended.
+    * `configure` - The path the the `configureBclToFastq.py` command.
+    * `configure_options` - Options for above.
+    * `make_threads` - How many threads `make` should use.
   * `[Options]` - These are more generic options that don't fit elsewhere.
     * `postMakeThreads` - After the fastq files are made, things like fastqc are run on each of them. This value sets the total number of worker threads that are used to do that.
     * `minSpace` - The minimum free space (in gigabytes) that must be free in the `outputDir`. Having less free space than this results in an error email message.
@@ -99,18 +103,4 @@ This package has the following dependencies:
 
 To Do
 =====
- - [ ] Combine samples in the same library across flow cells?
  - [ ] Remove remnant debugging steps.
- - [X] Automatically distribute processed samples.
- - [X] Handle identically named samples within the same project that are made with different libraries (in case this ever happens).
- - [X] Possibly reformat the output PDF files to include both the sample ID (i.e., library) and sample name, since the latter is likey what's tracked by the end user.
- - [X] Per-project PDF files
- - [X] PDFs should allow graphics and frames
- - [X] Graphics should probably be contained in the module
- - [X] Need to not buffer logging information
- - [X] What does DEEP need in addition? Answer: nothing
- - [X] Add an explanation of each column to the PDFs
- - [X] Read length and type (PE/SE) should be written in the project pdf
- - [X] Xml and InterOp stuff should be directly written to yet another directory.
- - [X] Share stuff to EVA automatically, rather than with `seq_share.sh`
- - [X] Give some proper documentation above, particularly about postMakeThreads.
