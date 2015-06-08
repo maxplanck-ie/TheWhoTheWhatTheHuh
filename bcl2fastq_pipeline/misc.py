@@ -17,6 +17,7 @@ import csv
 import sys
 import glob
 import pathlib
+import subprocess
 
 def transferData(config) :
     """
@@ -51,6 +52,10 @@ def transferData(config) :
                     group,
                     config.get("Options","runID"),
                     pname))
+                subprocess.call(['chmod','-R','g-w', "%s/%s/sequencing_data/%s" % (
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID"))])
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
@@ -97,6 +102,10 @@ def transferData(config) :
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
                     pname))
+                subprocess.call(['chmod','-R','g-w', "%s/sequencing_data/%s/%s" % (
+                    config.get("Paths","DEEPDir"),
+                    config.get("Options","runID"),
+                    pname)])
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
