@@ -58,6 +58,7 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
     * `seqFacDir` - The base directory readable by the sequencing facility, for the files they're interested in.
     * `groupDir` - The base directory holding all group's datasets (currently, this should be `/data` for us).
     * `DEEPDir` - The base directory holding all DEEP datasets.
+    * `UniDir` - The base directory to hold all universitry datasets.
     * `logDir` - The directory in which `make` logs are written. Illumina's software can be quite verbose...
   * `[FastQC]`
     * `fastqc_command` - Either just `fastqc` or possibly the full path, as appropriate.
