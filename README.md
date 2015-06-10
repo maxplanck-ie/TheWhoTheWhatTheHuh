@@ -105,4 +105,4 @@ This package has the following dependencies:
 Starting at boot
 ================
 
-The `bcl2fastq.sysVinit` file can be used as a template to start at boot.
+The `bcl2fastq` file can be used as a template to start at boot. Note that the name should not be changed without changing the lock file as well.
