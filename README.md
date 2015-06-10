@@ -102,6 +102,11 @@ This package has the following dependencies:
   * md5sum must be present
   * There must be an available sendmail server somewhere. This package currently does not support authentication, but that could presumably be added.
 
+Starting at boot
+================
+
+The `bcl2fastq.sysVinit` file can be used as a template to start at boot.
+
 To Do
 =====
  - [ ] Remove remnant debugging steps.
