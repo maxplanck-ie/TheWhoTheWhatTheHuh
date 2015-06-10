@@ -107,6 +107,3 @@ while True:
 
     #Mark the flow cell as having been processed
     bcl2fastq_pipeline.findFlowCells.markFinished(config)
-
-    #DEBUGGING!
-    break
