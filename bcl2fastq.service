@@ -1,6 +1,6 @@
 [Unit]
 Description=bcl2fastq demultiplexing pipeline
-After=nfs-config.service
+After=local-fs.service
 
 [Service]
 Type=simple
