@@ -1,0 +1,13 @@
+[Unit]
+Description=bcl2fastq demultiplexing pipeline
+After=nfs-config.service
+
+[Service]
+Type=simple
+User=pipegrp
+ExecStart=/home/pipegrp/.local/bin/bfq.py
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

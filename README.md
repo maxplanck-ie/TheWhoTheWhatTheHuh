@@ -105,4 +105,4 @@ This package has the following dependencies:
 Starting at boot
 ================
 
-The `bcl2fastq` file can be used as a template to start at boot. Note that the name should not be changed without changing the lock file as well.
+The `bcl2fastq` file can be used as a template to start at boot on SysV-based systems. `bcl2fastq.service` serves the same function for systems using systemd.
