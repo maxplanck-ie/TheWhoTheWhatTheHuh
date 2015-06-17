@@ -37,7 +37,8 @@ def transferData(config) :
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID")))
-                p.mkdir(mode=0o770, parents=True)
+                if(p.exists() == False) :
+                    p.mkdir(mode=0o770, parents=True)
                 shutil.copytree(project, "%s/%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","groupDir"),
                     group,
@@ -66,7 +67,8 @@ def transferData(config) :
                 p = pathlib.Path("%s/sequencing_data/%s" % (
                     config.get("Paths","UniDir"),
                     config.get("Options","runID")))
-                p.mkdir(mode=0o770, parents=True)
+                if(p.exists() == False) :
+                    p.mkdir(mode=0o770, parents=True)
                 shutil.copytree(project, "%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","UniDir"),
                     config.get("Options","runID"),
@@ -89,7 +91,8 @@ def transferData(config) :
                 p = pathlib.Path("%s/sequencing_data/%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID")))
-                p.mkdir(mode=0o770, parents=True)
+                if(p.exists() == False) :
+                    p.mkdir(mode=0o770, parents=True)
                 shutil.copytree(project, "%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
