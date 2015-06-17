@@ -8,6 +8,7 @@ import shutil
 import glob
 import csv
 import glob
+import syslog
 
 def mergeLanesRename(config) :
     '''
@@ -15,8 +16,7 @@ def mergeLanesRename(config) :
 
     Also, rename files such that they use sample names rather than IDs
     '''
-    sys.stderr.write("[mergeLanesRename] Merging and renaming samples\n")
-    sys.stderr.flush()
+    syslog.syslog("[mergeLanesRename] Merging and renaming samples\n")
     inLane=False
     for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r")) :
         if(inLane) :
@@ -121,16 +121,14 @@ def bcl2fq(config) :
         config.get("Paths","outputDir"),
         config.get("Options","runID")
     )
-    sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
-    sys.stderr.flush()
+    syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
     subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     cmd = "cd %s/%s && make -j %s" % (
         config.get("Paths","outputDir"),
         config.get("Options","runID"),
         config.get("bcl2fastq","make_threads")
     )
-    sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
-    sys.stderr.flush()
+    syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
     subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     logOut.close()
     logErr.close()

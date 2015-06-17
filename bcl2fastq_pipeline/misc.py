@@ -18,6 +18,7 @@ import sys
 import glob
 import pathlib
 import subprocess
+import syslog
 
 def transferData(config) :
     """
@@ -30,8 +31,7 @@ def transferData(config) :
         if(pname[8] == "A") :
             #Copy
             group = pname.split("_")[2].lower()
-            sys.stderr.write("[transferData] Transferring %s\n" % pname)
-            sys.stderr.flush()
+            syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
                 p = pathlib.Path("%s/%s/sequencing_data/%s" % (
                     config.get("Paths","groupDir"),
@@ -61,8 +61,7 @@ def transferData(config) :
             except :
                 message += "\n%s\tError during transfer!" % pname
         elif(pname[8] == "B") :
-            sys.stderr.write("[transferData] Transferring %s\n" % pname)
-            sys.stderr.flush()
+            syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
                 p = pathlib.Path("%s/sequencing_data/%s" % (
                     config.get("Paths","UniDir"),
@@ -85,8 +84,7 @@ def transferData(config) :
             except :
                 message += "\n%s\tError during transfer!" % pname
         elif(pname[8] == "C") :
-            sys.stderr.write("[transferData] Transferring %s\n" % pname)
-            sys.stderr.flush()
+            syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
                 p = pathlib.Path("%s/sequencing_data/%s" % (
                     config.get("Paths","DEEPDir"),
@@ -134,8 +132,7 @@ def getSampleIDNameProjectLaneTuple(config) :
             if(line[0] == "Lane") :
                 inBottom = True
     if(inBottom is False) :
-        sys.stderr.write("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
-        sys.stderr.flush()
+        syslog.syslog("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
         return None
     return samples
 

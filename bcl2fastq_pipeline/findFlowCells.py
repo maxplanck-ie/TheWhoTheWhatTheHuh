@@ -10,6 +10,7 @@ import sys
 import smtplib
 import glob
 from email.mime.text import MIMEText
+import syslog
 
 #Returns 1 on processed, 0 on unprocessed
 def flowCellProcessed(config) :
@@ -39,8 +40,7 @@ def newFlowCell(config) :
         config.set('Options','runID',d.split("/")[-2])
 
         if(flowCellProcessed(config) is False) :
-            sys.stderr.write("Found a new flow cell: %s\n" % config.get("Options","runID"))
-            sys.stderr.flush()
+            syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
             return config
         else :
             config.set("Options","runID","")
