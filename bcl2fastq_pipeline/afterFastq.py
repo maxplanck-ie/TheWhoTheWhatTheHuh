@@ -106,10 +106,14 @@ def postMakeSteps(config) :
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(FastQC_worker, sampleFiles)
+    p.close()
+    p.join()
 
     #md5sum
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(md5sum_worker, projectDirs)
+    p.close()
+    p.join()
 
     #disk usage
     (tot,used,free) = shutil.disk_usage(config.get("Paths","outputDir"))
