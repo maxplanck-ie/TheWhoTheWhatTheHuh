@@ -35,13 +35,12 @@ def mergeLanesRename(config) :
             for f in files :
                 cmd += "%s " % f
                 cmd2 += "%s " % f
-            cmd += "> %s/%s/Project_%s/Sample_%s/%s_%s_R1_001.fastq.gz" % (
+            cmd += "> %s/%s/Project_%s/Sample_%s/%s_R1.fastq.gz" % (
                  config.get("Paths","outputDir"),
                  config.get("Options","runID"),
                  line[7],
                  line[1],
-                 line[2],
-                 line[6])
+                 line[2])
             subprocess.check_call(cmd, shell=True)
             subprocess.check_call(cmd2, shell=True)
             #Read2
@@ -59,13 +58,12 @@ def mergeLanesRename(config) :
             for f in files :
                 cmd += "%s " % f
                 cmd2 += "%s " % f
-            cmd += "> %s/%s/Project_%s/Sample_%s/%s_%s_R2_001.fastq.gz" % (
+            cmd += "> %s/%s/Project_%s/Sample_%s/%s_R2.fastq.gz" % (
                  config.get("Paths","outputDir"),
                  config.get("Options","runID"),
                  line[7],
                  line[1],
-                 line[2],
-                 line[6])
+                 line[2])
             subprocess.check_call(cmd, shell=True)
             subprocess.check_call(cmd2, shell=True)
         else :
