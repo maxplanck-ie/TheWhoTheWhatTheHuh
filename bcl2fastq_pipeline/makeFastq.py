@@ -80,7 +80,7 @@ def reformatSampleSheet(config) :
     newSS.write("FCID,Lane,SampleID,SampleRef,Index,Description,Control,Recipe,Operator,SampleProject\n")
     inLane=False
     FCID = config.get("Options","runID").split("_")[-1][1:]
-    for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r")) :
+    for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r").decode("iso-8859-1")) :
         if(inLane) :
             newSS.write("%s,%s,%s,,%s,%s,N,,,%s\n" % (
               FCID,
