@@ -19,6 +19,7 @@ import glob
 import pathlib
 import subprocess
 import syslog
+import codecs
 
 def transferData(config) :
     """
@@ -125,7 +126,7 @@ def getSampleIDNameProjectLaneTuple(config) :
     """
     samples = []
     inBottom = False
-    for line in csv.reader(open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r")) :
+    for line in csv.reader(codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r","iso-8859-1")) :
         if(inBottom) :
             samples.append([line[1],line[2],line[0],line[7]])
         else :
@@ -380,7 +381,7 @@ def parseConversionStats(config) :
     matrix = []
     inLane=False
     projects = set()
-    for line in open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r") :
+    for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r","iso-8859-1") :
         line = line.strip().split(",")
         if(inLane) :
             #Lane, SampleID, SampleName, Barcode, Project,
