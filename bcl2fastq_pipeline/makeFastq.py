@@ -22,13 +22,22 @@ def mergeLanesRename(config) :
     for line in csv.reader(codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r","iso-8859-1")) :
         if(inLane) :
             #Read1
-            files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_%s_L???_R1_???.fastq.gz" % (
-                 config.get("Paths","outputDir"),
-                 config.get("Options","runID"),
-                 line[7],
-                 line[1],
-                 line[1],
-                 line[6]))
+            if(len(line) == 7) :
+                #Single sample, no demultiplexing needed
+                files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_NoIndex_L???_R1_???.fastq.gz" % (
+                     config.get("Paths","outputDir"),
+                     config.get("Options","runID"),
+                     line[5],
+                     line[1],
+                     line[1]))
+            else :
+                files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_%s_L???_R1_???.fastq.gz" % (
+                     config.get("Paths","outputDir"),
+                     config.get("Options","runID"),
+                     line[7],
+                     line[1],
+                     line[1],
+                     line[6]))
             if(len(files) == 0) :
                 continue
             cmd = "cat "
@@ -45,13 +54,21 @@ def mergeLanesRename(config) :
             subprocess.check_call(cmd, shell=True)
             subprocess.check_call(cmd2, shell=True)
             #Read2
-            files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_%s_L???_R2_???.fastq.gz" % (
-                 config.get("Paths","outputDir"),
-                 config.get("Options","runID"),
-                 line[7],
-                 line[1],
-                 line[1],
-                 line[6]))
+            if(len(line) == 7) :
+                files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_NoIndex_L???_R2_???.fastq.gz" % (
+                     config.get("Paths","outputDir"),
+                     config.get("Options","runID"),
+                     line[5],
+                     line[1],
+                     line[1]))
+            else :
+                files = glob.glob("%s/%s/Project_%s/Sample_%s/%s_%s_L???_R2_???.fastq.gz" % (
+                     config.get("Paths","outputDir"),
+                     config.get("Options","runID"),
+                     line[7],
+                     line[1],
+                     line[1],
+                     line[6]))
             if(len(files) == 0) :
                 continue
             cmd = "cat "
@@ -68,6 +85,8 @@ def mergeLanesRename(config) :
             subprocess.check_call(cmd, shell=True)
             subprocess.check_call(cmd2, shell=True)
         else :
+            if(len(line) == 0) :
+                continue
             if(line[0] == "Lane") :
                 inLane=True
 
@@ -83,15 +102,27 @@ def reformatSampleSheet(config) :
     FCID = config.get("Options","runID").split("_")[-1][1:]
     for line in csv.reader(codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"), config.get("Options","runID")),"r","iso-8859-1")) :
         if(inLane) :
-            newSS.write("%s,%s,%s,,%s,%s,N,,,%s\n" % (
-              FCID,
-              line[0],
-              line[1],
-              line[6],
-              line[8],
-              line[7]
-            ))
+            if(len(line) > 8) :
+                newSS.write("%s,%s,%s,,%s,%s,N,,,%s\n" % (
+                  FCID,
+                  line[0],
+                  line[1],
+                  line[6],
+                  line[8],
+                  line[7]
+                ))
+            elif(len(line) == 7) :
+                #Single sample format
+                newSS.write("%s,%s,%s,,,%s,N,,,%s\n" % (
+                  FCID,
+                  line[0],
+                  line[1],
+                  line[6], 
+                  line[5]
+                ))
         else :
+            if(len(line) == 0) :
+                continue
             if(line[0] == "Lane") :
                 inLane=True
     newSS.close()
