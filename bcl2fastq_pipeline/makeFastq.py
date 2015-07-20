@@ -42,6 +42,7 @@ def mergeLanesRename(config) :
                 continue
             cmd = "cat "
             cmd2 = "rm "
+            files.sort()
             for f in files :
                 cmd += "%s " % f
                 cmd2 += "%s " % f
@@ -81,6 +82,7 @@ def mergeLanesRename(config) :
                 continue
             cmd = "cat "
             cmd2 = "rm "
+            files.sort()
             for f in files :
                 cmd += "%s " % f
                 cmd2 += "%s " % f
