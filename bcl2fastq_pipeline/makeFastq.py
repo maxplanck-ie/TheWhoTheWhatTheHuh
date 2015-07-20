@@ -99,6 +99,20 @@ def mergeLanesRename(config) :
                      line[1],
                      line[1],
                      line[6]))
+            if(len(line) == 7) :
+                cmd += "> %s/%s/Project_%s/Sample_%s/%s_R1.fastq.gz" % (
+                     config.get("Paths","outputDir"),
+                     config.get("Options","runID"),
+                     line[5],
+                     line[1],
+                     line[1])
+            else :
+                cmd += "> %s/%s/Project_%s/Sample_%s/%s_R1.fastq.gz" % (
+                     config.get("Paths","outputDir"),
+                     config.get("Options","runID"),
+                     line[7],
+                     line[1],
+                     line[2])
             subprocess.check_call(cmd, shell=True)
             subprocess.check_call(cmd2, shell=True)
         else :
