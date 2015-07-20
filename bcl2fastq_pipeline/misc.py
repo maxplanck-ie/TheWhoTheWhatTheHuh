@@ -396,7 +396,6 @@ def parseConversionStats(config) :
             #Lane, SampleID, SampleName, Barcode, Project,
             #clusterCount, clusterCountPass, baseYield*2,
             #baseYieldQ30*2, QualSum*2, rlens*2
-            matrix.append([line[0],line[1],line[2],line[6],line[7], 0,0,0,0,0,0,0,0,0,0])
             if(len(line) == 7) :
                 matrix.append([line[0], line[1], line[6], line[2], line[5], 0,0,0,0,0,0,0,0,0,0])
                 if line[5] not in projects :
