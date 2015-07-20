@@ -100,14 +100,14 @@ def mergeLanesRename(config) :
                      line[1],
                      line[6]))
             if(len(line) == 7) :
-                cmd += "> %s/%s/Project_%s/Sample_%s/%s_R1.fastq.gz" % (
+                cmd += "> %s/%s/Project_%s/Sample_%s/%s_R2.fastq.gz" % (
                      config.get("Paths","outputDir"),
                      config.get("Options","runID"),
                      line[5],
                      line[1],
                      line[1])
             else :
-                cmd += "> %s/%s/Project_%s/Sample_%s/%s_R1.fastq.gz" % (
+                cmd += "> %s/%s/Project_%s/Sample_%s/%s_R2.fastq.gz" % (
                      config.get("Paths","outputDir"),
                      config.get("Options","runID"),
                      line[7],
