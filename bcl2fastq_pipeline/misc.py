@@ -128,8 +128,13 @@ def getSampleIDNameProjectLaneTuple(config) :
     inBottom = False
     for line in csv.reader(codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r","iso-8859-1")) :
         if(inBottom) :
-            samples.append([line[1],line[2],line[0],line[7]])
-        else :
+            if(len(line) == 7) :
+                samples.append([line[1], line[6], line[0], line[5]])
+            else :
+                samples.append([line[1], line[2], line[0], line[7]])
+         else :
+            if(len(line) == 0) :
+                continue
             if(line[0] == "Lane") :
                 inBottom = True
     if(inBottom is False) :
@@ -303,8 +308,12 @@ def makeProjectPDF(project, matrix, config) :
 def getID(matrix, lane, sampleID, barcode) :
     idx = 0
     for row in matrix :
-        if(row[0] == lane and row[1] == sampleID and row[3] == barcode) :
-            return idx
+        if(row[3] == "") :
+            if(row[0] == lane and row[1] == sampleID) :
+                return idx
+        else :
+            if(row[0] == lane and row[1] == sampleID and row[3] == barcode) :
+                return idx
         idx+=1
     return None
 
@@ -388,8 +397,14 @@ def parseConversionStats(config) :
             #clusterCount, clusterCountPass, baseYield*2,
             #baseYieldQ30*2, QualSum*2, rlens*2
             matrix.append([line[0],line[1],line[2],line[6],line[7], 0,0,0,0,0,0,0,0,0,0])
-            if line[7] not in projects :
-                projects.add(line[7])
+            if(len(line) == 7) :
+                matrix.append([line[0], line[1], line[6], line[2], line[5], 0,0,0,0,0,0,0,0,0,0])
+                if line[5] not in projects :
+                    projects.add(line[5])
+            else :
+                matrix.append([line[0],line[1],line[2],line[6],line[7], 0,0,0,0,0,0,0,0,0,0])
+                if line[7] not in projects :
+                    projects.add(line[7])
         else :
             if(line[0] == "Lane") :
                 inLane = True
