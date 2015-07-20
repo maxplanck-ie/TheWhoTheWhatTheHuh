@@ -132,7 +132,7 @@ def getSampleIDNameProjectLaneTuple(config) :
                 samples.append([line[1], line[6], line[0], line[5]])
             else :
                 samples.append([line[1], line[2], line[0], line[7]])
-         else :
+        else :
             if(len(line) == 0) :
                 continue
             if(line[0] == "Lane") :
