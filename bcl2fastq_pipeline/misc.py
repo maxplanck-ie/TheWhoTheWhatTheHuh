@@ -92,7 +92,7 @@ def getSampleIDNameProjectLaneTuple(config) :
     """
     samples = []
     inBottom = False
-    if(os.path.isfile("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID") == FALSE) :
+    if(os.path.isfile("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID"))) == FALSE) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] No sample sheet! This *must* be an unindexed project.\n")
         return None
 

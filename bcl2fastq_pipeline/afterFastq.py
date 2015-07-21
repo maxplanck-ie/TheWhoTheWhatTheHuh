@@ -106,9 +106,9 @@ def postMakeSteps(config) :
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
 
-    projectDirs = glob.glob("%s/%s/*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    projectDirs = glob.glob("%s/%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
     projectDirs = toDirs(projectDirs)
-    sampleFiles = glob.glob("%s/%s/*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    sampleFiles = glob.glob("%s/%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     global localConfig
     localConfig = config
 

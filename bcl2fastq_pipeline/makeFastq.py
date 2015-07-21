@@ -21,7 +21,7 @@ def bcl2fq(config) :
     if(os.path.isfile("%s/%s/SampleSheet.csv" % (
         config.get("Paths", "baseDir"),
         config.get("Options", "runID")
-    ) :
+    ))) :
         mask = "--use-bases-mask Y*,I6n,Y*"
     else :
         mask = ""
