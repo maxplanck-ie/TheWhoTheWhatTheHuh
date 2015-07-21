@@ -8,6 +8,7 @@ import subprocess
 import os
 import shutil
 import xml.etree.ElementTree as ET
+import syslog
 
 '''
 Do we really need the md5sum?
@@ -32,8 +33,7 @@ def FastQC_worker(fname) :
           config.get("Options","runID"),
           projectName,
           libName), exist_ok=True)
-    sys.stderr.write("[FastQC_worker] Running %s\n" % cmd)
-    sys.stderr.flush()
+    syslog.syslog("[FastQC_worker] Running %s\n" % cmd)
     subprocess.check_call(cmd, shell=True)
 
 def toDirs(files) :
@@ -49,8 +49,7 @@ def md5sum_worker(d) :
     oldWd = os.getcwd()
     os.chdir(d)
     cmd = "md5sum */*.fastq.gz > md5sums.txt"
-    sys.stderr.write("[md5sum_worker] Processing %s\n" % d)
-    sys.stderr.flush()
+    syslog.syslog("[md5sum_worker] Processing %s\n" % d)
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 
@@ -116,10 +115,14 @@ def postMakeSteps(config) :
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(FastQC_worker, sampleFiles)
+    p.close()
+    p.join()
 
     #md5sum
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(md5sum_worker, projectDirs)
+    p.close()
+    p.join()
 
     #disk usage
     (tot,used,free) = shutil.disk_usage(config.get("Paths","outputDir"))

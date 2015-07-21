@@ -3,33 +3,40 @@ import sys
 import os
 import datetime
 import time
-from bcl2fastq_pipeline import getConfig
-from bcl2fastq_pipeline import findFlowCells
-from bcl2fastq_pipeline import makeFastq
-from bcl2fastq_pipeline import afterFastq
-from bcl2fastq_pipeline import misc
+import bcl2fastq_pipeline.getConfig
+import bcl2fastq_pipeline.findFlowCells
+import bcl2fastq_pipeline.makeFastq
+import bcl2fastq_pipeline.afterFastq
+import bcl2fastq_pipeline.misc
+import importlib
 
 def sleep(config) :
     time.sleep(float(config['Options']['sleepTime'])*60*60)
 
 while True:
+    #Reimport to allow reloading a new version
+    importlib.reload(bcl2fastq_pipeline.getConfig)
+    importlib.reload(bcl2fastq_pipeline.findFlowCells)
+    importlib.reload(bcl2fastq_pipeline.makeFastq)
+    importlib.reload(bcl2fastq_pipeline.afterFastq)
+    importlib.reload(bcl2fastq_pipeline.misc)
+
     #Read the config file
-    config = getConfig.getConfig()
+    config = bcl2fastq_pipeline.getConfig.getConfig()
     if(config is None) :
         #There's no recovering from this!
         sys.exit("Error: couldn't read the config file!")
 
     #Get the next flow cell to process, or sleep
-    config = findFlowCells.newFlowCell(config)
+    config = bcl2fastq_pipeline.findFlowCells.newFlowCell(config)
     if(config.get('Options','runID') == "") :
         sleep(config)
         continue
 
     #Ensure we have sufficient space
-    if(misc.enoughFreeSpace(config) == False) :
-        sys.stderr.write("Error: insufficient free space!\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Error: insufficient free space!")
+    if(bcl2fastq_pipeline.misc.enoughFreeSpace(config) == False) :
+        syslog.syslog("Error: insufficient free space!\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Error: insufficient free space!")
         sleep(config)
         continue
 
@@ -37,41 +44,37 @@ while True:
 
     #Make the fastq files
     try:
-        makeFastq.bcl2fq(config)
+        bcl2fastq_pipeline.makeFastq.bcl2fq(config)
     except :
-        sys.stderr.write("Got an error in bcl2fq\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
+        syslog.syslog("Got an error in bcl2fq\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
         sleep(config)
         continue
 
     #Run post-processing steps
     try :
-        message = afterFastq.postMakeSteps(config)
+        message = bcl2fastq_pipeline.afterFastq.postMakeSteps(config)
     except :
-        sys.stderr.write("Got an error during postMakeSteps\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error during postMakeSteps")
+        syslog.syslog("Got an error during postMakeSteps\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during postMakeSteps")
         sleep(config)
         continue
 
     #Copy over xml and FastQC stuff
     try:
-        makeFastq.cpSeqFac(config)
+        bcl2fastq_pipeline.makeFastq.cpSeqFac(config)
     except :
-        sys.stderr.write("Got an error in cpSeqFac\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
+        syslog.syslog("Got an error in cpSeqFac\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
         sleep(config)
         continue
 
     #Get more statistics and create PDFs
     try :
-        message += "\n\n"+misc.parseConversionStats(config)
+        message += "\n\n"+bcl2fastq_pipeline.misc.parseConversionStats(config)
     except :
-        sys.stderr.write("Got an error during parseConversionStats\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error during parseConversionStats")
+        syslog.syslog("Got an error during parseConversionStats\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during parseConversionStats")
         sleep(config)
         continue
 
@@ -80,11 +83,10 @@ while True:
 
     #Transfer data to groups
     try : 
-        message += misc.transferData(config)
+        message += bcl2fastq_pipeline.misc.transferData(config)
     except :
-        sys.stderr.write("Got an error during distributeData\n")
-        sys.stderr.flush()
-        misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
+        syslog.syslog("Got an error during distributeData\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
         sleep(config)
         continue
 
@@ -92,13 +94,11 @@ while True:
 
     #Email finished message
     try :
-        misc.finishedEmail(config, message, runTime, transferTime)
+        bcl2fastq_pipeline.misc.finishedEmail(config, message, runTime, transferTime)
     except :
         #Unrecoverable error
-        sys.exit("Couldn't send the finished email! Quiting")
+        syslog.syslog("Couldn't send the finished email! Quiting")
+        sys.exit()
 
     #Mark the flow cell as having been processed
-    findFlowCells.markFinished(config)
-
-    #DEBUGGING!
-    break
+    bcl2fastq_pipeline.findFlowCells.markFinished(config)
