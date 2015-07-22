@@ -8,6 +8,16 @@ import shutil
 import glob
 import syslog
 
+def fixNames(config) :
+    fnames = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    print(fnames)
+    for fname in fnames :
+        idx = fname.rindex("_")
+        fnew = fname[0:idx]+".fastq.gz"
+        sys.stderr.write("Moving %s to %s\n" % (fname, fnew))
+        sys.stderr.flush()
+        shutil.move(fname, fnew)
+
 def bcl2fq(config) :
     '''
     takes things from /dont_touch_this/solexa_runs/XXX/Data/Intensities/BaseCalls
@@ -37,11 +47,14 @@ def bcl2fq(config) :
         config.get("Options","runID")
     )
     syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
+    sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
+    sys.stderr.flush()
     logOut = open("%s/%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
     logErr = open("%s/%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
     subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     logOut.close()
     logErr.close()
+    fixNames(config)
 
 def cpSeqFac(config) :
     '''

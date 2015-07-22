@@ -34,6 +34,8 @@ def FastQC_worker(fname) :
           projectName,
           libName), exist_ok=True)
     syslog.syslog("[FastQC_worker] Running %s\n" % cmd)
+    sys.stderr.write("[FastQC_worker] Running %s\n" % cmd)
+    sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)
 
 def toDirs(files) :
@@ -50,6 +52,8 @@ def md5sum_worker(d) :
     os.chdir(d)
     cmd = "md5sum */*.fastq.gz > md5sums.txt"
     syslog.syslog("[md5sum_worker] Processing %s\n" % d)
+    sys.stderr.write("[md5sum_worker] Processing %s\n" % d)
+    sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 
@@ -106,9 +110,9 @@ def postMakeSteps(config) :
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
 
-    projectDirs = glob.glob("%s/%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    projectDirs = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
     projectDirs = toDirs(projectDirs)
-    sampleFiles = glob.glob("%s/%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    sampleFiles = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     global localConfig
     localConfig = config
 

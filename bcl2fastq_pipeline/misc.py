@@ -17,6 +17,7 @@ import csv
 import sys
 import glob
 import pathlib
+import os
 import syslog
 import codecs
 
@@ -32,6 +33,8 @@ def transferData(config) :
             #Copy
             group = pname.split("_")[2].lower()
             syslog.syslog("[transferData] Transferring %s\n" % pname)
+            sys.stderr.write("[transferData] Transferring %s\n" % pname)
+            sys.stderr.flush()
             try :
                 p = pathlib.Path("%s/%s/sequencing_data/%s" % (
                     config.get("Paths","groupDir"),
@@ -57,6 +60,8 @@ def transferData(config) :
                 message += "\n%s\tError during transfer!" % pname
         elif(pname[0] == "C") :
             syslog.syslog("[transferData] Transferring %s\n" % pname)
+            sys.stderr.write("[transferData] Transferring %s\n" % pname)
+            sys.stderr.flush()
             try :
                 p = pathlib.Path("%s/sequencing_data/%s" % (
                     config.get("Paths","DEEPDir"),
@@ -92,8 +97,10 @@ def getSampleIDNameProjectLaneTuple(config) :
     """
     samples = []
     inBottom = False
-    if(os.path.isfile("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID"))) == FALSE) :
+    if(os.path.isfile("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID"))) == False) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] No sample sheet! This *must* be an unindexed project.\n")
+        sys.stderr.write("[getSampleIDNameProjectLaneTuple] No sample sheet! This *must* be an unindexed project.\n")
+        sys.stderr.flush()
         return None
 
     for line in csv.reader(codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1")) :
@@ -104,6 +111,8 @@ def getSampleIDNameProjectLaneTuple(config) :
                 inBottom = True
     if(inBottom is False) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
+        sys.stderr.write("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
+        sys.stderr.flush()
         return None
     return samples
 

@@ -41,6 +41,8 @@ def newFlowCell(config) :
 
         if(flowCellProcessed(config) is False) :
             syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
+            sys.stderr.write("Found a new flow cell: %s\n" % config.get("Options","runID"))
+            sys.stderr.flush()
             return config
         else :
             config.set("Options","runID","")

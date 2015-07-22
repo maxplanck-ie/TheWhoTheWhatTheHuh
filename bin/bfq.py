@@ -3,6 +3,7 @@ import sys
 import os
 import datetime
 import time
+import syslog
 import bcl2fastq_pipeline.getConfig
 import bcl2fastq_pipeline.findFlowCells
 import bcl2fastq_pipeline.makeFastq
@@ -102,3 +103,6 @@ while True:
 
     #Mark the flow cell as having been processed
     bcl2fastq_pipeline.findFlowCells.markFinished(config)
+
+    #Debugging
+    sys.exit()
