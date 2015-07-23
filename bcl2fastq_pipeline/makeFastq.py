@@ -7,6 +7,69 @@ import sys
 import shutil
 import glob
 import syslog
+import csv
+import codecs
+import tempfile
+import xml.etree.ElementTree as ET
+
+def rewriteSampleSheet(config) :
+    '''
+    If it exists, make a modified copy of the sample sheet to ensure that:
+     A) It contains no special characters
+     B) It contains no adapter sequences (so adapter trimming is disabled
+    An appropriate "--sample-sheet blah --use-bases-mask foo" is returned
+    '''
+
+    #Determine the proper mask
+    tree = ET.parse("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"),config.get("Options","runID")))
+    paired = False
+    indexed = False
+    root = tree.getroot()
+    for read in root.iter("Read") :
+        if(int(read.get("Number")) > 1) :
+            if(read.get("IsIndexedRead") == "Y") :
+                indexed = True
+            else :
+                paired = True
+    mask = ""
+    if(paired and indexed) :
+        mask = "--use-bases-mask Y*,I6n,Y*"
+    elif(paired) :
+        mask = "--use-bases-mask Y*,Y*"
+    elif(indexed) :
+        mask = "--use-bases-mask Y*,I6n"
+    
+    if(os.path.isfile("%s/%s/SampleSheet.csv" % (
+        config.get("Paths", "baseDir"),
+        config.get("Options", "runID")
+    ))) :
+        od, oname = tempfile.mkstemp()
+        of = open(oname, "w")
+        inData = False
+        for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1") :
+            if(line.startswith("Lane")) :
+                inData = True
+            elif(inData) :
+                #+ to _plus_
+                line = line.replace("+", "_plus_")
+                #ö to oe
+                line = line.replace("ö", "oe")
+                line = line.replace("Ö", "Oe")
+                #ä to ae
+                line = line.replace("ä", "ae")
+                line = line.replace("Ä", "Ae")
+                #ü to ue
+                line = line.replace("ü", "ue")
+                line = line.replace("Ü", "Ue")
+            else :
+                if(line.startswith("Adapter")) :
+                    continue
+            of.write(line)
+        of.close()
+        os.close(od)
+        return ["--sample-sheet %s %s" % (oname, mask), oname]
+    else :
+        return None
 
 def fixNames(config) :
     fnames = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
@@ -28,13 +91,10 @@ def bcl2fq(config) :
     os.makedirs("%s/%s/InterOp" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), exist_ok=True)
 
     #If there's no sample sheet then we need to not mask the last index base!
-    if(os.path.isfile("%s/%s/SampleSheet.csv" % (
-        config.get("Paths", "baseDir"),
-        config.get("Options", "runID")
-    ))) :
-        mask = "--use-bases-mask Y*,I6n,Y*"
-    else :
-        mask = ""
+    rv = rewriteSampleSheet(config)
+    mask = ""
+    if(rv is not None) :
+        mask = rv[0]
     cmd = "%s %s %s -o %s/%s -R %s/%s --interop-dir %s/%s/InterOp" % (
         config.get("bcl2fastq","bcl2fastq"),
         config.get("bcl2fastq","bcl2fastq_options"),
@@ -55,6 +115,8 @@ def bcl2fq(config) :
     logOut.close()
     logErr.close()
     fixNames(config)
+    if(rv is not None) :
+        os.unlink(rv[1])
 
 def cpSeqFac(config) :
     '''
