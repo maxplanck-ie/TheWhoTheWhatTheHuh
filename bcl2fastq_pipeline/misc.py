@@ -308,7 +308,7 @@ def makeProjectPDF(project, matrix, config) :
 def getID(matrix, lane, sampleID, barcode) :
     idx = 0
     for row in matrix :
-        if(row[3] == "") :
+        if(row[3] == "" or barcode == "NoIndex") :
             if(row[0] == lane and row[1] == sampleID) :
                 return idx
         else :
