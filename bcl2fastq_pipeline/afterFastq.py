@@ -16,6 +16,15 @@ Do we really need the md5sum?
 
 localConfig = None
 
+def bgzip_worker(fname) :
+    global localConfig
+    config = localConfig
+    cmd = "%s -r %s" % (
+        config.get("bgzip","bgzip_command"),
+        fname)
+    syslog.syslog("[bgzip_worker] Running %s\n" % cmd)
+    subprocess.check_call(cmd, shell=True)
+
 def FastQC_worker(fname) :
     global localConfig
     config = localConfig
@@ -34,8 +43,6 @@ def FastQC_worker(fname) :
           projectName,
           libName), exist_ok=True)
     syslog.syslog("[FastQC_worker] Running %s\n" % cmd)
-    sys.stderr.write("[FastQC_worker] Running %s\n" % cmd)
-    sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)
 
 def toDirs(files) :
@@ -52,8 +59,6 @@ def md5sum_worker(d) :
     os.chdir(d)
     cmd = "md5sum */*.fastq.gz > md5sums.txt"
     syslog.syslog("[md5sum_worker] Processing %s\n" % d)
-    sys.stderr.write("[md5sum_worker] Processing %s\n" % d)
-    sys.stderr.flush()
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 
@@ -125,6 +130,12 @@ def postMakeSteps(config) :
     #md5sum
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(md5sum_worker, projectDirs)
+    p.close()
+    p.join()
+
+    #index bgzip files
+    p = mp.Pool(int(config.get("Options","postMakeThreads")))
+    p.map(bgzip_worker, sampleFiles)
     p.close()
     p.join()
 

@@ -20,30 +20,12 @@ def rewriteSampleSheet(config) :
     An appropriate "--sample-sheet blah --use-bases-mask foo" is returned
     '''
 
-    #Determine the proper mask
-    tree = ET.parse("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"),config.get("Options","runID")))
-    paired = False
-    indexed = False
-    root = tree.getroot()
-    for read in root.iter("Read") :
-        if(int(read.get("Number")) > 1) :
-            if(read.get("IsIndexedRead") == "Y") :
-                indexed = True
-            else :
-                paired = True
-    mask = ""
-    if(paired and indexed) :
-        mask = "--use-bases-mask Y*,I6n,Y*"
-    elif(paired) :
-        mask = "--use-bases-mask Y*,Y*"
-    elif(indexed) :
-        mask = "--use-bases-mask Y*,I6n"
-    
     if(os.path.isfile("%s/%s/SampleSheet.csv" % (
         config.get("Paths", "baseDir"),
         config.get("Options", "runID")
     ))) :
         od, oname = tempfile.mkstemp()
+        config.set("Options", "sampleSheet", oname)
         of = open(oname, "w")
         inData = False
         for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1") :
@@ -67,18 +49,17 @@ def rewriteSampleSheet(config) :
             of.write(line)
         of.close()
         os.close(od)
-        return ["--sample-sheet %s %s" % (oname, mask), oname]
+        return "--sample-sheet %s" % oname
     else :
+        config.set("Options", "sampleSheet", "")
         return None
 
 def fixNames(config) :
     fnames = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
-    print(fnames)
     for fname in fnames :
         idx = fname.rindex("_")
         fnew = fname[0:idx]+".fastq.gz"
-        sys.stderr.write("Moving %s to %s\n" % (fname, fnew))
-        sys.stderr.flush()
+        syslog.syslog("Moving %s to %s\n" % (fname, fnew))
         shutil.move(fname, fnew)
 
 def bcl2fq(config) :
@@ -94,7 +75,7 @@ def bcl2fq(config) :
     rv = rewriteSampleSheet(config)
     mask = ""
     if(rv is not None) :
-        mask = rv[0]
+        mask = rv
     cmd = "%s %s %s -o %s/%s -R %s/%s --interop-dir %s/%s/InterOp" % (
         config.get("bcl2fastq","bcl2fastq"),
         config.get("bcl2fastq","bcl2fastq_options"),
@@ -107,16 +88,12 @@ def bcl2fq(config) :
         config.get("Options","runID")
     )
     syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
-    sys.stderr.write("[bcl2fq] Running: %s\n" % cmd)
-    sys.stderr.flush()
     logOut = open("%s/%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
     logErr = open("%s/%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
     subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     logOut.close()
     logErr.close()
     fixNames(config)
-    if(rv is not None) :
-        os.unlink(rv[1])
 
 def cpSeqFac(config) :
     '''

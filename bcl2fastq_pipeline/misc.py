@@ -33,8 +33,6 @@ def transferData(config) :
             #Copy
             group = pname.split("_")[2].lower()
             syslog.syslog("[transferData] Transferring %s\n" % pname)
-            sys.stderr.write("[transferData] Transferring %s\n" % pname)
-            sys.stderr.flush()
             try :
                 p = pathlib.Path("%s/%s/sequencing_data/%s" % (
                     config.get("Paths","groupDir"),
@@ -60,8 +58,6 @@ def transferData(config) :
                 message += "\n%s\tError during transfer!" % pname
         elif(pname[0] == "C") :
             syslog.syslog("[transferData] Transferring %s\n" % pname)
-            sys.stderr.write("[transferData] Transferring %s\n" % pname)
-            sys.stderr.flush()
             try :
                 p = pathlib.Path("%s/sequencing_data/%s" % (
                     config.get("Paths","DEEPDir"),
@@ -97,13 +93,11 @@ def getSampleIDNameProjectLaneTuple(config) :
     """
     samples = []
     inBottom = False
-    if(os.path.isfile("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID"))) == False) :
+    if(config.get("Options", "sampleSheet") == "" or os.path.isfile(config.get("Options", "sampleSheet")) == False) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] No sample sheet! This *must* be an unindexed project.\n")
-        sys.stderr.write("[getSampleIDNameProjectLaneTuple] No sample sheet! This *must* be an unindexed project.\n")
-        sys.stderr.flush()
         return None
 
-    for line in csv.reader(codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1")) :
+    for line in csv.reader(codecs.open("%s" % config.get("Options", "sampleSheet"), "r", "iso-8859-1")) :
         if(inBottom) :
             samples.append([line[1],line[2],line[0],line[7]])
         else :
@@ -111,19 +105,17 @@ def getSampleIDNameProjectLaneTuple(config) :
                 inBottom = True
     if(inBottom is False) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
-        sys.stderr.write("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
-        sys.stderr.flush()
         return None
     return samples
 
-def getSampleName(sampleTuple, project, lane, sampleID) :
+def getSampleID(sampleTuple, project, lane, sampleName) :
     if(sampleTuple is None) :
         return " "
     for item in sampleTuple :
-        if(sampleID == item[0] and
+        if(sampleName == item[1] and
             lane == item[2] and
             project == item[3]) :
-            return item[1]
+            return item[0]
     return " "
 
 def makeProjectPDF(node, project, config) :
@@ -222,8 +214,8 @@ def makeProjectPDF(node, project, config) :
                         e[7] += int(tile[1][2][1].text) #Pf->Read2->YieldQ30
                         e[8] += int(tile[1][2][2].text) #Pf->Read2->QualSum
                 if(PE) :
-                    data.append([e[0],
-                                 getSampleName(st, project, e[2], e[0]),
+                    data.append([getSampleID(st, project, e[2], e[0]),
+                                 e[0],
                                  e[1],
                                  e[2],
                                  e[3],
@@ -233,8 +225,8 @@ def makeProjectPDF(node, project, config) :
                                  "%5.2f" % (e[8]/e[4])
                         ])
                 else :
-                    data.append([e[0],
-                                 getSampleName(st, project, e[2], e[0]),
+                    data.append([getSampleID(st, project, e[2], e[0]),
+                                 e[0],
                                  e[1],
                                  e[2],
                                  e[3],
