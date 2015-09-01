@@ -25,6 +25,39 @@ def bgzip_worker(fname) :
     syslog.syslog("[bgzip_worker] Running %s\n" % cmd)
     subprocess.check_call(cmd, shell=True)
 
+def fastq_screen_worker(fname) :
+    global localConfig
+    config = localConfig
+
+    #Skip read #2
+    bname = fname.split("/")[-1]
+    if(bname[-12:] == "_R2.fastq.gz") :
+        return
+
+    #Subsample
+    ofile=fname.replace("_R1.fastq.gz","subsampled.fastq")
+    cmd = "%s %s %s %s" % (
+        config.get("fastq_screen","seqtk_command"),
+        config.get("fastq_screen","seqtk_options"),
+        fname,
+        config.get("fastq_screen","seqtk_size"))
+    syslog.syslog("[fastq_screen_worker] Running %s\n" % cmd)
+    o = open(ofile, "w")
+    subprocess.check_call(cmd, shell=True, stdout=o)
+    o.close()
+
+    #fastq_screen
+    cmd = "%s %s %s" % (
+        config.get("fastq_screen", "fastq_screen_command"),
+        config.get("fastq_screen", "fastq_screen_options"),
+        ofile)
+    syslog.syslog("[fastq_screen_worker] Running %s\n" % cmd)
+    subprocess.check_call(cmd, shell=True)
+
+    #Unlink/rename
+    os.unlink(ofile)
+    #rename the output...
+
 def FastQC_worker(fname) :
     global localConfig
     config = localConfig
@@ -136,6 +169,12 @@ def postMakeSteps(config) :
     #index bgzip files
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(bgzip_worker, sampleFiles)
+    p.close()
+    p.join()
+
+    #fastq_screen
+    p = mp.Pool(int(config.get("Options", "postMakeThreads")))
+    p.map(fastq_screen_worker, sampleFiles)
     p.close()
     p.join()
 
