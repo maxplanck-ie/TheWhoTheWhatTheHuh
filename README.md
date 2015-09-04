@@ -109,8 +109,9 @@ To Do
  - [X] Make PDF for all groups with fastq_screen results
  - [X] Ensure that delivery still works, since the formatting has changed
  - [ ] Test full scale
-   - [X] Paired-end
+   - [X] Paired-end 150504_SN7001180_0201_AH32FJBCXX
    - [ ] No sample sheet
-   - [ ] Single end
-   - [ ] Illegal characters
-   - [ ] DEEP transfer
+   - [ ] Single end 150511_SN7001180_0206_AH3MMHBCXX
+   - [ ] Illegal characters 150701_SN7001180_0215_AC7AN9ACXX
+   - [ ] DEEP transfer 150810_SN7001180_0224_BH5TVGBCXX
+     - [ ] Check delivery
