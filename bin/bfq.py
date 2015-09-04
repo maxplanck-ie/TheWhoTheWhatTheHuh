@@ -61,21 +61,21 @@ while True:
         sleep(config)
         continue
 
-    #Copy over xml and FastQC stuff
-    try:
-        bcl2fastq_pipeline.makeFastq.cpSeqFac(config)
-    except :
-        syslog.syslog("Got an error in cpSeqFac\n")
-        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
-        sleep(config)
-        continue
-
     #Get more statistics and create PDFs
     try :
         message += "\n\n"+bcl2fastq_pipeline.misc.parseConversionStats(config)
     except :
         syslog.syslog("Got an error during parseConversionStats\n")
         bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during parseConversionStats")
+        sleep(config)
+        continue
+
+    #Copy over xml, FastQC, and PDF stuff
+    try:
+        message += bcl2fastq_pipeline.makeFastq.cpSeqFac(config)
+    except :
+        syslog.syslog("Got an error in cpSeqFac\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in cpSeqFac")
         sleep(config)
         continue
 
@@ -103,3 +103,4 @@ while True:
 
     #Mark the flow cell as having been processed
     bcl2fastq_pipeline.findFlowCells.markFinished(config)
+    break

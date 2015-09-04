@@ -8,7 +8,7 @@ import smtplib
 from email.mime.text import MIMEText
 import xml.etree.ElementTree as ET
 from reportlab.lib import colors, utils
-from reportlab.platypus import BaseDocTemplate, Table, Preformatted, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate, TableStyle
+from reportlab.platypus import BaseDocTemplate, Table, Preformatted, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate, TableStyle, PageBreak, ListFlowable, ListItem
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4, landscape
 from time import strftime
@@ -26,12 +26,12 @@ def transferData(config) :
     Distribute fastq and fastQC files to users.
     """
     message = ""
-    projects = glob.glob("%s/%s/FASTQC_*" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    projects = glob.glob("%s/%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     for project in projects :
-        pname = project.split("/")[-1][7:]
+        pname = project.split("/")[-1][8:]
         if(pname[0] == "A") :
             #Copy
-            group = pname.split("_")[2].lower()
+            group = pname.split("_")[1].lower()
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
                 p = pathlib.Path("%s/%s/sequencing_data/%s" % (
@@ -39,20 +39,20 @@ def transferData(config) :
                     group,
                     config.get("Options","runID")))
                 p.mkdir(mode=0o770, parents=True)
-                shutil.copytree(project, "%s/%s/sequencing_data/%s/FASTQC_%s" % (
+                shutil.copytree(project, "%s/%s/sequencing_data/%s/%s" % (
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID"),
-                    pname))
-                shutil.copytree("%s/%s/%s" % (
+                    project.split("/")[-1]))
+                shutil.copytree("%s/%s/FASTQC_%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
-                    pname)
-                    , "%s/%s/sequencing_data/%s/%s" % (
+                    project.split("/")[-1])
+                    , "%s/%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID"),
-                    pname))
+                    project.split("/")[-1]))
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
@@ -66,15 +66,15 @@ def transferData(config) :
                 shutil.copytree(project, "%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
-                    pname))
+                    project.split("/")[-1]))
                 shutil.copytree("%s/%s/%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
-                    pname)
+                    project.split("/")[-1])
                     , "%s/sequencing_data/%s/%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
-                    pname))
+                    project.split("/")[-1]))
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
@@ -135,7 +135,7 @@ def makeProjectPDF(node, project, config) :
 
     stylesheet=getSampleStyleSheet()
 
-    pdf = BaseDocTemplate("%s/%s/%s/SequencingReport.pdf" % (
+    pdf = BaseDocTemplate("%s/%s/Project_%s/SequencingReport.pdf" % (
         config.get("Paths","outputDir"),config.get("Options","runID"),
         project), pagesize=landscape(A4))
     topHeight=100 #The image is 86 pixels tall
@@ -289,6 +289,34 @@ def makeProjectPDF(node, project, config) :
     t2 = Table(key, colWidths=(80, None))
     t2.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
     elements.append(t2)
+
+    #fastq_screen images
+    elements.append(PageBreak())
+    elements.append(Paragraph("Contaminant screen", stylesheet['title']))
+    elements.append(Paragraph("Below are images generated on the output of fastq_screen. In short, 1 million reads are randomly taken from each indicated sample. These reads are then aligned against a variety of organisms (mouse, human, etc.). The resulting alignments are then categorized as follows:", stylesheet['Normal']))
+    elements.append(ListFlowable([
+        Paragraph("unique: aligns only a single time within a single species.", stylesheet['Normal']),
+        Paragraph("multimap: aligns multiple times, but only within a single species.", stylesheet['Normal']),
+        Paragraph("conserved: aligns a single time to each of two or more species.", stylesheet['Normal']),
+        Paragraph("repeat: aligns multiple times to each of two or more species.", stylesheet['Normal'])],
+        bulletType='bullet',
+        start='circle'))
+    elements.append(Spacer(0,30))
+    elements.append(Paragraph("Ideally, the 'unique' and 'multimap' values will only be appreciably present in the species from which your sample should have arisen.", stylesheet['Normal']))
+    elements.append(Spacer(0,30))
+    elements.append(Paragraph("Note that as the mouse and human reference genomes are the best quality, many low complexity reads will align to them.", stylesheet['Normal']))
+    elements.append(Spacer(0,30))
+    fqs = glob.glob("%s/%s/Project_%s/*/*.png" % (
+        config.get("Paths","outputDir"),
+        config.get("Options","runID"),
+        project))
+    fqs.sort()
+    for fq in fqs:
+        img = utils.ImageReader(fq)
+        iw, ih = img.getSize()
+        iw = 0.7*iw
+        ih = 0.7*ih
+        elements.append(Image(fq, width=iw, height=ih, hAlign="LEFT"))
 
     pdf.addPageTemplates([PageTemplate(id="FirstPage", frames=[fTL, fTR, fB]),
         PageTemplate(id="RemainingPages", frames=[fM])]),

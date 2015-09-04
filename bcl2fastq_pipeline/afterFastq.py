@@ -9,6 +9,11 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 import syslog
+import csv
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.image as img
 
 '''
 Do we really need the md5sum?
@@ -25,6 +30,45 @@ def bgzip_worker(fname) :
     syslog.syslog("[bgzip_worker] Running %s\n" % cmd)
     subprocess.check_call(cmd, shell=True)
 
+def plotFastqScreen(fname) :
+    species=[]
+    ohol=[]
+    mhol=[]
+    ohml=[]
+    mhml=[]
+    for line in csv.reader(open(fname, "r"), dialect="excel-tab") :
+        if(len(line) == 0) :
+            break
+        if(line[0].startswith("#")) :
+            continue
+        if(line[0].startswith("Library")) :
+            continue
+        species.append(line[0])
+        ohol.append(float(line[5]))
+        mhol.append(float(line[7]))
+        ohml.append(float(line[9]))
+        mhml.append(float(line[11]))
+
+    ohol = np.array(ohol)
+    mhol = np.array(mhol)
+    ohml = np.array(ohml)
+    mhml = np.array(mhml)
+
+    ind = np.arange(len(species))
+    p1 = plt.bar(ind, tuple(ohol), color="#0000FF")
+    p2 = plt.bar(ind, tuple(mhol), color="#6699FF", bottom=tuple(ohol))
+    p3 = plt.bar(ind, tuple(ohml), color="#FF0000", bottom=tuple(ohol+mhol))
+    p4 = plt.bar(ind, tuple(mhml), color="#FF6699", bottom=tuple(ohol+mhol+ohml))
+
+    plt.title("%s" % fname.replace("_R1_screen.txt","").split("/")[-1])
+    plt.ylabel("%")
+    plt.ylim((0,105))
+    plt.xticks(ind+0.4, species, rotation="vertical")
+    plt.yticks(np.arange(0,110,10))
+    plt.legend((p4[0], p3[0], p2[0], p1[0]), ("repeat", "conserved", "multimap", "unique"))
+    plt.tight_layout()
+    plt.savefig("%s.png" % fname.replace("_screen.txt","_screen"))
+
 def fastq_screen_worker(fname) :
     global localConfig
     config = localConfig
@@ -36,7 +80,7 @@ def fastq_screen_worker(fname) :
 
     #Subsample
     ofile=fname.replace("_R1.fastq.gz","subsampled.fastq")
-    cmd = "%s %s %s %s" % (
+    cmd = "%s sample %s %s %s" % (
         config.get("fastq_screen","seqtk_command"),
         config.get("fastq_screen","seqtk_options"),
         fname,
@@ -56,7 +100,10 @@ def fastq_screen_worker(fname) :
 
     #Unlink/rename
     os.unlink(ofile)
-    #rename the output...
+    os.rename(ofile.replace(".fastq","_screen.txt"), fname.replace("_R1.fastq.gz", "_R1_screen.txt"))
+
+    #Create the images
+    plotFastqScreen(fname.replace("_R1.fastq.gz", "_R1_screen.txt"))
 
 def FastQC_worker(fname) :
     global localConfig
@@ -148,9 +195,9 @@ def postMakeSteps(config) :
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
 
-    projectDirs = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    projectDirs = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
     projectDirs = toDirs(projectDirs)
-    sampleFiles = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    sampleFiles = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     global localConfig
     localConfig = config
 
@@ -166,11 +213,11 @@ def postMakeSteps(config) :
     p.close()
     p.join()
 
-    #index bgzip files
-    p = mp.Pool(int(config.get("Options","postMakeThreads")))
-    p.map(bgzip_worker, sampleFiles)
-    p.close()
-    p.join()
+    ##index bgzip files
+    #p = mp.Pool(int(config.get("Options","postMakeThreads")))
+    #p.map(bgzip_worker, sampleFiles)
+    #p.close()
+    #p.join()
 
     #fastq_screen
     p = mp.Pool(int(config.get("Options", "postMakeThreads")))

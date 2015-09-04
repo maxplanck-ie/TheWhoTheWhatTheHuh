@@ -94,25 +94,22 @@ This package has the following dependencies:
   * Python3 (python2 will explicitly not work, since some package and function names differ).
   * The configparser module
   * The reportlab module
+  * numpy and matplotlib
   * bcl2fastq version 2+
+  * fastq_screen
   * FastQC must be present
   * md5sum must be present
   * There must be an available sendmail server somewhere. This package currently does not support authentication, but that could presumably be added.
 
 To Do
 =====
- - [ ] Combine samples in the same library across flow cells?
- - [ ] Remove remnant debugging steps.
- - [X] Automatically distribute processed samples.
- - [X] Handle identically named samples within the same project that are made with different libraries (in case this ever happens).
- - [X] Possibly reformat the output PDF files to include both the sample ID (i.e., library) and sample name, since the latter is likey what's tracked by the end user.
- - [X] Per-project PDF files
- - [X] PDFs should allow graphics and frames
- - [X] Graphics should probably be contained in the module
- - [X] Need to not buffer logging information
- - [X] What does DEEP need in addition? Answer: nothing
- - [X] Add an explanation of each column to the PDFs
- - [X] Read length and type (PE/SE) should be written in the project pdf
- - [X] Xml and InterOp stuff should be directly written to yet another directory.
- - [X] Share stuff to EVA automatically, rather than with `seq_share.sh`
- - [X] Give some proper documentation above, particularly about postMakeThreads.
+ - [X] Include fastq_screen images in lab reports
+ - [X] Include contamination percentage in group email
+ - [X] Make PDF for all groups with fastq_screen results
+ - [ ] Ensure that delivery still works, since the formatting has changed
+ - [ ] Test full scale
+   - [X] Paired-end
+   - [ ] No sample sheet
+   - [ ] Single end
+   - [ ] Illegal characters
+   - [ ] DEEP transfer
