@@ -99,6 +99,7 @@ This package has the following dependencies:
   * fastq_screen
   * FastQC must be present
   * md5sum must be present
+  * The Pillow python module must be relatively up to date and functional (can't install in Ubuntu and have it work in CentOS).
   * There must be an available sendmail server somewhere. This package currently does not support authentication, but that could presumably be added.
 
 To Do
@@ -106,7 +107,7 @@ To Do
  - [X] Include fastq_screen images in lab reports
  - [X] Include contamination percentage in group email
  - [X] Make PDF for all groups with fastq_screen results
- - [ ] Ensure that delivery still works, since the formatting has changed
+ - [X] Ensure that delivery still works, since the formatting has changed
  - [ ] Test full scale
    - [X] Paired-end
    - [ ] No sample sheet
