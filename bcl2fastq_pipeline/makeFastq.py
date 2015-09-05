@@ -34,9 +34,22 @@ def rewriteSampleSheet(config) :
         of = open(oname, "w")
         inData = False
         PE = False
+        BC = True
+        inReads = 0
         for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1") :
-            if(line.startswith("Lane")) :
+            if(line.startswith("Lane") and (inData is False)) :
                 inData = True
+                #Do we have a barcode?
+                if(line.split(",")[6] != "index") :
+                    BC = False
+            elif(line.startswith("[Reads]")) :
+                inReads = 1
+            elif(inReads == 1) :
+                inReads = 2
+            elif(inReads==2) :
+                if(line.startswith(",") is False) :
+                    PE = True
+                inReads = 0
             elif(inData) :
                 #+ to _plus_
                 line = line.replace("+", "_plus_")
@@ -53,13 +66,13 @@ def rewriteSampleSheet(config) :
                 line = line.replace("ß", "sz")
             else :
                 if(line.startswith("Adapter")) :
-                    if(line.startswith("AdapterRead2")) :
-                        PE = True
                     continue
             of.write(line)
         of.close()
         os.close(od)
-        if(PE) :
+        if(BC is False) :
+            return "--sample-sheet %s" % oname
+        if(PE is True) :
             return "--sample-sheet %s --use-bases-mask Y*,I6n,Y*" % oname
         else :
             return "--sample-sheet %s --use-bases-mask Y*,I6n" % oname

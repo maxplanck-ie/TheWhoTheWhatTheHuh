@@ -39,11 +39,29 @@ def transferData(config) :
                     group,
                     config.get("Options","runID")))
                 p.mkdir(mode=0o770, parents=True)
+
+                sys.stderr.write("%s -> %s/%s/sequencing_data/%s/%s\n" % (
+                    project,
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID"),
+                    project.split("/")[-1]))
+
                 shutil.copytree(project, "%s/%s/sequencing_data/%s/%s" % (
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID"),
                     project.split("/")[-1]))
+
+                sys.stderr.write("%s/%s/FASTQC_%s -> %s/%s/sequencing_data/%s/FASTQC_%s\n" % (
+                    config.get("Paths","outputDir"),
+                    config.get("Options","runID"),
+                    project.split("/")[-1],
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID"),
+                    project.split("/")[-1]))
+
                 shutil.copytree("%s/%s/FASTQC_%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
@@ -63,10 +81,26 @@ def transferData(config) :
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID")))
                 p.mkdir(mode=0o770, parents=True)
+
+                sys.stderr.write("%s -> %s/sequencing_data/%s/FASTQC_%s\n" % (
+                    project,
+                    config.get("Paths","DEEPDir"),
+                    config.get("Options","runID"),
+                    project.split("/")[-1]))
+
                 shutil.copytree(project, "%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
                     project.split("/")[-1]))
+
+                sys.stderr.write("%s/%s/%s -> %s/sequencing_data/%s/%s\n" % (
+                    config.get("Paths","outputDir"),
+                    config.get("Options","runID"),
+                    project.split("/")[-1],
+                    config.get("Paths","DEEPDir"),
+                    config.get("Options","runID"),
+                    project.split("/")[-1]))
+
                 shutil.copytree("%s/%s/%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
@@ -371,8 +405,12 @@ def parseConversionStats(config) :
      1) A PDF file for each project
      2) A message that will be included in the email message
     """
-    tree = ET.parse("%s/%s/Stats/ConversionStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID")))
-    root = tree.getroot()[0] #We only ever have a single flow cell
+    try :
+        tree = ET.parse("%s/%s/Stats/ConversionStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+        root = tree.getroot()[0] #We only ever have a single flow cell
+    except :
+        return None
+    metrics = None
     #Per-project PDF files
     for project in root.findall("Project") :
         if(project.get("name") == "default") :

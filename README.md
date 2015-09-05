@@ -107,11 +107,10 @@ To Do
  - [X] Include fastq_screen images in lab reports
  - [X] Include contamination percentage in group email
  - [X] Make PDF for all groups with fastq_screen results
- - [X] Ensure that delivery still works, since the formatting has changed
  - [ ] Test full scale
    - [X] Paired-end 150504_SN7001180_0201_AH32FJBCXX
-   - [ ] No sample sheet
-   - [ ] Single end 150511_SN7001180_0206_AH3MMHBCXX
-   - [ ] Illegal characters 150701_SN7001180_0215_AC7AN9ACXX
-   - [ ] DEEP transfer 150810_SN7001180_0224_BH5TVGBCXX
-     - [ ] Check delivery
+   - [ ] No sample sheet/unindexed 150713_SN7001180_0218_AH5VJJBCXX (with/without sample sheet) 74GB
+   - [X] Single end 150511_SN7001180_0206_AH3MMHBCXX 14GB
+   - [X] Illegal characters 150701_SN7001180_0215_AC7AN9ACXX 142GB
+   - [ ] DEEP transfer 150810_SN7001180_0224_BH5TVGBCXX 22GB
+     - [ ] Fix delivery
