@@ -40,23 +40,7 @@ def transferData(config) :
                     config.get("Options","runID")))
                 p.mkdir(mode=0o770, parents=True)
 
-                sys.stderr.write("%s -> %s/%s/sequencing_data/%s/%s\n" % (
-                    project,
-                    config.get("Paths","groupDir"),
-                    group,
-                    config.get("Options","runID"),
-                    project.split("/")[-1]))
-
                 shutil.copytree(project, "%s/%s/sequencing_data/%s/%s" % (
-                    config.get("Paths","groupDir"),
-                    group,
-                    config.get("Options","runID"),
-                    project.split("/")[-1]))
-
-                sys.stderr.write("%s/%s/FASTQC_%s -> %s/%s/sequencing_data/%s/FASTQC_%s\n" % (
-                    config.get("Paths","outputDir"),
-                    config.get("Options","runID"),
-                    project.split("/")[-1],
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID"),
@@ -82,21 +66,11 @@ def transferData(config) :
                     config.get("Options","runID")))
                 p.mkdir(mode=0o770, parents=True)
 
-                sys.stderr.write("%s -> %s/sequencing_data/%s/FASTQC_%s\n" % (
-                    project,
-                    config.get("Paths","DEEPDir"),
-                    config.get("Options","runID"),
-                    project.split("/")[-1]))
-
-                shutil.copytree(project, "%s/sequencing_data/%s/FASTQC_%s" % (
-                    config.get("Paths","DEEPDir"),
-                    config.get("Options","runID"),
-                    project.split("/")[-1]))
-
-                sys.stderr.write("%s/%s/%s -> %s/sequencing_data/%s/%s\n" % (
+                shutil.copytree("%s/%s/FASTQC_%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
-                    project.split("/")[-1],
+                    project.split("/")[-1]),
+                    "%s/sequencing_data/%s/FASTQC_%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
                     project.split("/")[-1]))

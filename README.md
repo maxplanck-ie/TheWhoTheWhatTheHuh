@@ -110,7 +110,9 @@ To Do
  - [ ] Test full scale
    - [X] Paired-end 150504_SN7001180_0201_AH32FJBCXX
    - [ ] No sample sheet/unindexed 150713_SN7001180_0218_AH5VJJBCXX (with/without sample sheet) 74GB
+     - [X] No sample sheet
+     - [ ] With sample sheet
    - [X] Single end 150511_SN7001180_0206_AH3MMHBCXX 14GB
    - [X] Illegal characters 150701_SN7001180_0215_AC7AN9ACXX 142GB
-   - [ ] DEEP transfer 150810_SN7001180_0224_BH5TVGBCXX 22GB
-     - [ ] Fix delivery
+   - [X] DEEP transfer 150810_SN7001180_0224_BH5TVGBCXX 22GB
+     - [X] Fix delivery
