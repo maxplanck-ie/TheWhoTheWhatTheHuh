@@ -151,15 +151,17 @@ def getOffSpecies(fname) :
             continue
         species.append(line[0])
         ohol.append(float(line[5]))
-        mhol.append(float(line[7]))
-        if(ohol[maxi]+mhol[maxi] < ohol[i]+mhol[i]) :
+        #mhol.append(float(line[7]))
+        #if(ohol[maxi]+mhol[maxi] < ohol[i]+mhol[i]) :
+        if(ohol[maxi] < ohol[i]) :
             maxi = i
         i += 1
 
     off = 0
     for i in range(len(ohol)) :
         if(i != maxi) :
-            off += ohol[i] + mhol[i]
+            #off += ohol[i] + mhol[i]
+            off += ohol[i]
     return off
 
 def MakeTotalPDF(config) :
@@ -176,8 +178,8 @@ def MakeTotalPDF(config) :
         config.get("Options","runID")), pagesize=A4)
     fM = Frame(pdf.leftMargin, pdf.bottomMargin, pdf.width, pdf.height, id="main")
 
-    tab = [["Project", "Sample", "off-species reads/sample"]]
-    txt = "\nProject\tSample\toff-species reads/sample\n"
+    tab = [["Project", "Sample", "confident off-species reads/sample"]]
+    txt = "\nProject\tSample\tconfident off-species reads/sample\n"
     elements = []
 
     projs = glob.glob("%s/%s/Project_*" % (
