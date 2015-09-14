@@ -68,6 +68,7 @@ def plotFastqScreen(fname) :
     plt.legend((p4[0], p3[0], p2[0], p1[0]), ("repeat", "conserved", "multimap", "unique"))
     plt.tight_layout()
     plt.savefig("%s.png" % fname.replace("_screen.txt","_screen"))
+    plt.close()
 
 def fastq_screen_worker(fname) :
     global localConfig
