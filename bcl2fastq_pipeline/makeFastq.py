@@ -11,6 +11,7 @@ import csv
 import codecs
 import tempfile
 import xml.etree.ElementTree as ET
+import re
 from reportlab.lib import colors, utils
 from reportlab.platypus import BaseDocTemplate, Table, Preformatted, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate, TableStyle
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -84,7 +85,8 @@ def fixNames(config) :
     fnames = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
     for fname in fnames :
         idx = fname.rindex("_")
-        fnew = fname[0:idx]+".fastq.gz"
+        fnew = fname[0:idx]
+        fnew = re.sub(r"_S[0-9]+_R([12])$",r'_R\1', fnew) + ".fastq.gz"
         syslog.syslog("Moving %s to %s\n" % (fname, fnew))
         shutil.move(fname, fnew)
 
