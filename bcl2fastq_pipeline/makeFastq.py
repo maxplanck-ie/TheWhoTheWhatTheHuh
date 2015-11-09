@@ -52,6 +52,8 @@ def rewriteSampleSheet(config) :
                     PE = True
                 inReads = 0
             elif(inData) :
+                #. to _dot_
+                line = line.replace(".", "_dot_")
                 #+ to _plus_
                 line = line.replace("+", "_plus_")
                 #ö to oe
