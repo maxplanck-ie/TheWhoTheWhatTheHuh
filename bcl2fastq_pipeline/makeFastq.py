@@ -52,6 +52,8 @@ def rewriteSampleSheet(config) :
                     PE = True
                 inReads = 0
             elif(inData) :
+                #, to _comma_
+                line = line.replace(",", "_comma_")
                 #. to _dot_
                 line = line.replace(".", "_dot_")
                 #+ to _plus_
