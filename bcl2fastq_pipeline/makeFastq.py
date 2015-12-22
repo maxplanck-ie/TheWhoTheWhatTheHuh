@@ -38,7 +38,7 @@ def rewriteSampleSheet(config) :
         BC = True
         inReads = 0
         for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1") :
-            if((line.startswith("Lane") ir line.startswith("Sample_ID")) and (inData is False)) :
+            if((line.startswith("Lane") or line.startswith("Sample_ID")) and (inData is False)) :
                 inData = True
                 #Do we have a barcode?
                 if(line.split(",")[6] != "index") :
