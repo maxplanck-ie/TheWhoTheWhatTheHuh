@@ -178,7 +178,10 @@ def makeProjectPDF(node, project, config) :
     string = "bcl2fastq version: %s" % (config.get("Version","bcl2fastq"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
-    readLength = int(int(node[0][0][0][0][0][1][0].text)/int(node[0][0][0][0][0][0].text))
+    try:
+        readLength = int(int(node[0][0][0][0][0][1][0].text)/int(node[0][0][0][0][0][0].text))
+    except:
+        readLength = 0
     string = "FastQC version: %s" % (config.get("Version","fastQC"))
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)

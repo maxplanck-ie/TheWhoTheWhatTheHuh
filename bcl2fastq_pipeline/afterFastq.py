@@ -214,12 +214,6 @@ def postMakeSteps(config) :
     p.close()
     p.join()
 
-    ##index bgzip files
-    #p = mp.Pool(int(config.get("Options","postMakeThreads")))
-    #p.map(bgzip_worker, sampleFiles)
-    #p.close()
-    #p.join()
-
     #fastq_screen
     p = mp.Pool(int(config.get("Options", "postMakeThreads")))
     p.map(fastq_screen_worker, sampleFiles)
