@@ -59,6 +59,28 @@ def transferData(config) :
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
+        elif(pname[0] == "B") :
+            syslog.syslog("[transferData] Transferring %s\n" % pname)
+            try :
+                # The Schuele group has its own person that should get these
+                if project.split("/")[-1].startswith("B01Schuele_"):
+                    recipient = config.get("Uni","Schuele")
+                else:
+                    recipient = config.get("Uni","default")
+                cmd = "tar cf - %s/%s/FASTQC_%s %s/%s/FASTQC_%s | fexsend -s %s.tar %s" % (
+                    config.get("Paths","outputDir"),
+                    config.get("Options","runID"),
+                    project.split("/")[-1],
+                    config.get("Paths","outputDir"),
+                    config.get("Options","runID"),
+                    project.split("/")[-1],
+                    project.split("/")[-1],
+                    recipient)
+                rv = os.system(cmd)
+                if rv != 0:
+                    assert(1==0)
+            except :
+                message += "\n%s\tError during transfer (fexsend returned error code %i)!" % (pname, rv)
         elif(pname[0] == "C") :
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
