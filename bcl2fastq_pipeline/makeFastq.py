@@ -76,9 +76,9 @@ def rewriteSampleSheet(config) :
         if(BC is False) :
             return "--sample-sheet %s" % oname
         if(PE is True) :
-            return "--sample-sheet %s --use-bases-mask Y*,I6n,Y*" % oname
+            return "--sample-sheet %s --use-bases-mask Y*,%s,Y*" % (oname, config.get("Options", "index_mask"))
         else :
-            return "--sample-sheet %s --use-bases-mask Y*,I6n" % oname
+            return "--sample-sheet %s --use-bases-mask Y*,%s" % (oname, config.get("Options", "index_mask"))
     else :
         config.set("Options", "sampleSheet", "")
         return None
