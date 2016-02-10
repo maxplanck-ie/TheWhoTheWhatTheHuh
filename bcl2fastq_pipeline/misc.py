@@ -77,9 +77,9 @@ def transferData(config) :
                     project.split("/")[-1],
                     recipient)
                 rv = os.system(cmd)
-                if rv != 0:
-                    assert(1==0)
-                message += "\n%s\ttransferred" % pname
+                #if rv != 0:
+                #    assert(1==0)
+                message += "\n%s\ttransferred (return code %s from command '%s')" % (pname, rv, cmd)
             except :
                 message += "\n%s\tError during transfer (fexsend returned error code %i)!" % (pname, rv)
         elif(pname[0] == "C") :
