@@ -41,7 +41,7 @@ def rewriteSampleSheet(config) :
             if((line.startswith("Lane") or line.startswith("Sample_ID")) and (inData is False)) :
                 inData = True
                 #Do we have a barcode?
-                if(index not in line.split(",")[5,6]) :
+                if("index" not in line.split(",")[5:6]) :
                     BC = False
             elif(line.startswith("[Reads]")) :
                 inReads = 1
