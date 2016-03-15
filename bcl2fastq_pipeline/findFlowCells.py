@@ -36,6 +36,7 @@ process, then the runID is filled in. Otherwise, that's set to None.
 def newFlowCell(config) :
     dirs = glob.glob("%s/*_SN7001180_*/RTAComplete.txt" % config.get("Paths","baseDir"))
     dirs.extend(glob.glob("%s/*_NB501361_*/RTAComplete.txt" % config.get("Paths","baseDir")))
+    dirs.extend(glob.glob("%s/*_M01358_*/RTAComplete.txt" % config.get("Paths","baseDir")))
     for d in dirs :
         #Get the flow cell ID (e.g., 150416_SN7001180_0196_BC605HACXX)
         config.set('Options','runID',d.split("/")[-2])
