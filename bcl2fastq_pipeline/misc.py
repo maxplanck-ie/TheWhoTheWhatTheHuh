@@ -131,6 +131,8 @@ def getSampleIDNameProjectLaneTuple(config) :
         return None
 
     for line in csv.reader(codecs.open("%s" % config.get("Options", "sampleSheet"), "r", "iso-8859-1")) :
+        if len(line) == 0:
+            continue
         if(inBottom) :
             samples.append([line[1],line[2],line[0],line[7]])
         else :
