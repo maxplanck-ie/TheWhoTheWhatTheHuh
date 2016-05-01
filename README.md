@@ -28,7 +28,8 @@ The general workflow of this pipeline is as follows:
     * Note that having insufficient space will lead to an email being sent to addresses set in `[Email]`->`errorTo`. The program will then sleep (see step 3) and loop (i.e., go back to step 1).
   5. Assuming there is at least one new flow cell and there's sufficient space, the program will generate fastq files.
     1. The sample sheet is first rewritten to strip out illegal character (e.g., anything with an umlaut). The rewritten sample sheet is placed in `/tmp` and not removed after running.
-    2. The program specified via `[bcl2fastq]`->`bcl2fastq` is run with options specified in `[bcl2fastq]`->`bcl2fastq_options`. In addition to these options, the follow are hard coded:
+    2. The barcode masking strategy is inferred from `RunInfo.xml`, unless it's already specified in the config file.
+    3. The program specified via `[bcl2fastq]`->`bcl2fastq` is run with options specified in `[bcl2fastq]`->`bcl2fastq_options`. In addition to these options, the follow are hard coded:
       1. `-o outputDir/runID`: The output directory is set to `[Paths]`->`outputDir/runID`. This directory is created if it doesn't already exist.
       2. `-r runDir/runID`: This is the directory that's being processed (`[Paths]`->`runDir`/`runID`).
         * This directory may be read only!

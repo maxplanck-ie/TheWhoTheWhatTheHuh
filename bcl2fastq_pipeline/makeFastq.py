@@ -18,6 +18,36 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+def determineMask(config):
+    '''
+    If there's already a mask set in the config file then return it.
+
+    Otherwise:
+     1. Check for RunInfo.xml
+     2. Parse each <Read> child, adding it to a list.
+     3. Join the list by commas
+     4. If there's no mask then return nothing
+    '''
+
+    mask = config.get("Options", "--index-mask")
+    if mask != "":
+        return "--use-bases-mask {}".format(mask)
+    elif os.path.isfile("%s/%s/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
+        xml = ET.parse("%s/%s/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID")))
+        root = xml.getroot()[0]
+        l = []
+        for read in root.findall("Read"):
+            if read.get("IsIndexedRead") == "N":
+                l.append("Y*")
+            else:
+                if read.get("NumCycles") == "7":
+                    l.append("I6n")
+                else:
+                    l.append("I{}".format(read.get("NumCycles")))
+        if len(l) > 0
+            return "--use-bases-mask {}".format(",".join(l))
+     return ""
+
 def rewriteSampleSheet(config) :
     '''
     If it exists, make a modified copy of the sample sheet to ensure that:
@@ -34,22 +64,15 @@ def rewriteSampleSheet(config) :
         config.set("Options", "sampleSheet", oname)
         of = open(oname, "w")
         inData = False
-        PE = False
-        BC = True
         inReads = 0
         for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1") :
             if((line.startswith("Lane") or line.startswith("Sample_ID")) and (inData is False)) :
                 inData = True
-                #Do we have a barcode?
-                if("index" not in line.split(",")[5:6]) :
-                    BC = False
             elif(line.startswith("[Reads]")) :
                 inReads = 1
             elif(inReads == 1) :
                 inReads = 2
             elif(inReads==2) :
-                if(line.startswith(",") is False) :
-                    PE = True
                 inReads = 0
             elif(inData) :
                 #. to _dot_
@@ -73,12 +96,7 @@ def rewriteSampleSheet(config) :
             of.write(line)
         of.close()
         os.close(od)
-        if(BC is False) :
-            return "--sample-sheet %s" % oname
-        if(PE is True) :
-            return "--sample-sheet %s --use-bases-mask Y*,%s,Y*" % (oname, config.get("Options", "index_mask"))
-        else :
-            return "--sample-sheet %s --use-bases-mask Y*,%s" % (oname, config.get("Options", "index_mask"))
+        return "--sample-sheet {} {}".format(oname, determineMask(config))
     else :
         config.set("Options", "sampleSheet", "")
         return None
