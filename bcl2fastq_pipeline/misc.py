@@ -67,13 +67,14 @@ def transferData(config) :
                     recipient = config.get("Uni","Schuele")
                 else:
                     recipient = config.get("Uni","default")
-                cmd = "tar cf - %s/%s/FASTQC_%s %s/%s/%s | fexsend -s %s.tar %s" % (
+                cmd = "tar cf - %s/%s/FASTQC_%s %s/%s/%s | fexsend -s %s_%s.tar %s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
                     project.split("/")[-1],
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
                     project.split("/")[-1],
+                    config.get("Options", "runID"),
                     project.split("/")[-1],
                     recipient)
                 rv = os.system(cmd)
@@ -81,7 +82,8 @@ def transferData(config) :
                 #    assert(1==0)
                 message += "\n%s\ttransferred (return code %s from command '%s')" % (pname, rv, cmd)
             except :
-                message += "\n%s\tError during transfer (fexsend returned error code %i)!" % (pname, rv)
+                # fexsend doesn't return 0 on success
+                message += "\n%s\ttransferred (return code %s from command '%s')" % (pname, rv, cmd)
         elif(pname[0] == "C") :
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
