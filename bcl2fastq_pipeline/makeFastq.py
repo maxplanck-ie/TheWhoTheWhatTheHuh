@@ -46,7 +46,7 @@ def determineMask(config):
                     l.append("I{}".format(read.get("NumCycles")))
         if len(l) > 0:
             return "--use-bases-mask {}".format(",".join(l))
-     return ""
+    return ""
 
 def rewriteSampleSheet(config) :
     '''
