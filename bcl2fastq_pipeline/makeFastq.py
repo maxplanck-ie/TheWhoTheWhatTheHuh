@@ -29,7 +29,7 @@ def determineMask(config):
      4. If there's no mask then return nothing
     '''
 
-    mask = config.get("Options", "--index-mask")
+    mask = config.get("Options", "index_mask")
     if mask != "":
         return "--use-bases-mask {}".format(mask)
     elif os.path.isfile("%s/%s/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
