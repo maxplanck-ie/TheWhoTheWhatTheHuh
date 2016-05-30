@@ -44,7 +44,7 @@ def determineMask(config):
                     l.append("I6n")
                 else:
                     l.append("I{}".format(read.get("NumCycles")))
-        if len(l) > 0
+        if len(l) > 0:
             return "--use-bases-mask {}".format(",".join(l))
      return ""
 
