@@ -32,9 +32,9 @@ def determineMask(config):
     mask = config.get("Options", "index_mask")
     if mask != "":
         return "--use-bases-mask {}".format(mask)
-    elif os.path.isfile("%s/%s/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
-        xml = ET.parse("%s/%s/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID")))
-        root = xml.getroot()[0]
+    elif os.path.isfile("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
+        xml = ET.parse("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID")))
+        root = xml.getroot()[0][3]
         l = []
         for read in root.findall("Read"):
             if read.get("IsIndexedRead") == "N":
