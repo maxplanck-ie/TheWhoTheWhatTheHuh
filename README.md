@@ -43,7 +43,8 @@ The general workflow of this pipeline is as follows:
     2. An md5sum is made of the fastq files in each project (see the file named "md5sums.txt").
       * As with FastQC, this is multithreaded, with the number of workers threads set via `[Options]`->`postMakeThreads`.
     3. A contamination screen is run with fastq_screen after downsampling read #1 of each sample.
-    4. Additional steps can be added to `afterFastq.py`, though note that the package will need to be reinstalled and the process restarted.
+    4. Runs multiQC on the output of FastQC.
+    5. Additional steps can be added to `afterFastq.py`, though note that the package will need to be reinstalled and the process restarted.
   7. Xml files and FastQC outputs are copied to a location readable by the sequencing facility.
     * This is location is set via `[Paths]`->`seqFacDir` and things placed under a `runID` subdirectory, as was the case with `InterOp` above.
     * Currently, the xml files are `RunInfo.xml` and `runParameters.xml`.
@@ -70,6 +71,9 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
   * `[FastQC]`
     * `fastqc_command` - Either just `fastqc` or possibly the full path, as appropriate.
     * `fastqc_options` - Options for fastqc
+  * `[MultiQC]`
+    * `multiqc_command` - Path to the multiqc command
+    * `multiqc_options` - Options for multiqc
   * `[fastq_screen]`
     * `fastq_screen_command` - The command to run `fastq_screen`
     * `fastq_screen_options` - Options to be passed to `fastq_screen`
@@ -117,6 +121,7 @@ This package has the following dependencies:
   * fastq\_screen
   * seqtk
   * FastQC must be present
+  * MultiQC must be present
   * md5sum must be present
   * The Pillow python module must be relatively up to date and functional (can't install in Ubuntu and have it work in CentOS).
   * There must be an available sendmail server somewhere. This package currently does not support authentication, but that could presumably be added.

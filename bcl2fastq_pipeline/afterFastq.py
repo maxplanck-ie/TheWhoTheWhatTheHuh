@@ -143,6 +143,16 @@ def md5sum_worker(d) :
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 
+def multiqc_worker(d) :
+    global localConfig
+    config = localConfig
+    oldWd = os.getcwd()
+    os.chdir(d)
+    cmd = "{} {} */*.zip".format(config.get("MultiQC", "PATH"), config.get("MultiQC", "options"))
+    syslog.syslog("[multiqc_worker] Processing %s\n" % d)
+    subprocess.check_call(cmd, shell=True)
+    os.chdir(oldWd)
+
 def parserDemultiplexStats(config) :
     '''
     Parse DemultiplexingStats.xml under outputDir/Stats/ to get the
@@ -217,6 +227,12 @@ def postMakeSteps(config) :
     #fastq_screen
     p = mp.Pool(int(config.get("Options", "postMakeThreads")))
     p.map(fastq_screen_worker, sampleFiles)
+    p.close()
+    p.join()
+
+    # multiqc
+    p = mp.Pool(int(config.get("Options","postMakeThreads")))
+    p.map(multiqc_worker, projectDirs)
     p.close()
     p.join()
 
