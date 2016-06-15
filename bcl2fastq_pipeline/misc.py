@@ -254,25 +254,47 @@ def makeProjectPDF(node, project, config) :
                         e[7] += int(tile[1][2][1].text) #Pf->Read2->YieldQ30
                         e[8] += int(tile[1][2][2].text) #Pf->Read2->QualSum
                 if(PE) :
-                    data.append([getSampleID(st, project, e[2], e[0]),
-                                 e[0],
-                                 e[1],
-                                 e[2],
-                                 e[3],
-                                 "%5.2f" % (100*(e[5]/e[4])),
-                                 "%5.2f" % (e[6]/e[4]),
-                                 "%5.2f" % (100*(e[7]/e[4])),
-                                 "%5.2f" % (e[8]/e[4])
-                        ])
+                    try:
+                        data.append([getSampleID(st, project, e[2], e[0]),
+                                     e[0],
+                                     e[1],
+                                     e[2],
+                                     e[3],
+                                     "%5.2f" % (100*(e[5]/e[4])),
+                                     "%5.2f" % (e[6]/e[4]),
+                                     "%5.2f" % (100*(e[7]/e[4])),
+                                     "%5.2f" % (e[8]/e[4])
+                            ])
+                    except:
+                        data.append([getSampleID(st, project, e[2], e[0]),
+                                     e[0],
+                                     e[1],
+                                     e[2],
+                                     e[3],
+                                     "NA",
+                                     "NA",
+                                     "NA",
+                                     "NA"
+                            ])
                 else :
-                    data.append([getSampleID(st, project, e[2], e[0]),
-                                 e[0],
-                                 e[1],
-                                 e[2],
-                                 e[3],
-                                 "%5.2f" % (100*(e[5]/e[4])),
-                                 "%5.2f" % (e[6]/e[4])
-                        ])
+                    try:
+                        data.append([getSampleID(st, project, e[2], e[0]),
+                                     e[0],
+                                     e[1],
+                                     e[2],
+                                     e[3],
+                                     "%5.2f" % (100*(e[5]/e[4])),
+                                     "%5.2f" % (e[6]/e[4])
+                            ])
+                    except:
+                        data.append([getSampleID(st, project, e[2], e[0]),
+                                     e[0],
+                                     e[1],
+                                     e[2],
+                                     e[3],
+                                     "NA",
+                                     "NA"
+                            ])
 
     t = Table(data, style=[
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
@@ -389,19 +411,34 @@ def getFCmetrics(root) :
             if(len(tile[1]) == 3) :
                 QualSum[1] += int(tile[1][2][2].text)
         #Number of clusters (%passing filter)
-        message += "\t%i (%5.2f%%)" % (clusterCount,100*clusterCountPass/clusterCount)
+        try:
+            message += "\t%i (%5.2f%%)" % (clusterCount,100*clusterCountPass/clusterCount)
+        except:
+            message += "\t%i (NA)" % (clusterCount)
         #%bases above Q30
         if(baseYield[1] > 0) :
-            message += "\t%5.2f%%/%5.2f%%" % (100*(baseYieldQ30[0]/baseYield[0]),
-                100*(baseYieldQ30[1]/baseYield[1]))
+            try:
+                message += "\t%5.2f%%/%5.2f%%" % (100*(baseYieldQ30[0]/baseYield[0]),
+                    100*(baseYieldQ30[1]/baseYield[1]))
+            except:
+                message += "\tNA/NA"
         else :
-            message += "\t%5.2f%%" % (100*(baseYieldQ30[0]/baseYield[0]))
+            try:
+                message += "\t%5.2f%%" % (100*(baseYieldQ30[0]/baseYield[0]))
+            except:
+                message += "\tNA"
         #Average base quality
         if(baseYield[1] > 0) :
-            message += "\t%4.1f/%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount),
-                QualSum[1]/clusterCountPass/(baseYield[1]/clusterCount))
+            try:
+                message += "\t%4.1f/%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount),
+                    QualSum[1]/clusterCountPass/(baseYield[1]/clusterCount))
+            except:
+                message += "\tNA/NA\n"
         else :
-            message += "\t%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount))
+            try:
+                message += "\t%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount))
+            except:
+                message += "\tNA\n"
 
     return message
 
