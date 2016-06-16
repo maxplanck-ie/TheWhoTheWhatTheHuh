@@ -148,7 +148,10 @@ def multiqc_worker(d) :
     config = localConfig
     oldWd = os.getcwd()
     os.chdir(d)
-    cmd = "{} {} */*.zip".format(config.get("MultiQC", "multiqc_command"), config.get("MultiQC", "multiqc_options"))
+    dname = d.split("/")
+    dname[-1] = "FASTQC_{}".format(dname[-1])
+    dname = "/".join(dname)
+    cmd = "{} {} {}/*/*.zip".format(config.get("MultiQC", "multiqc_command"), config.get("MultiQC", "multiqc_options"), dname)
     syslog.syslog("[multiqc_worker] Processing %s\n" % d)
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
