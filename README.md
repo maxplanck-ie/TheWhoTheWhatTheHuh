@@ -7,6 +7,7 @@ This is our bcl to fastq pipeline. Features include:
   * Adds quality metrics to the report email
   * Performs a contamination screen
   * Automatically delivers data to most groups and posts external data to the F\*EX server
+  * Internal groups additionally have their data linked into Galaxy, if possible
   * Compiles an automated project-report (pdf), to go along with each submission. This uses [ReportLab](https://pypi.python.org/pypi/reportlab).
   * Functions divided into more meaningful subfiles in a module, rather than being scattered across levels of shell scripts
   * Written explicitly for python3, just to future proof things a bit.
@@ -54,6 +55,7 @@ The general workflow of this pipeline is as follows:
     * If the directories already exist then an error is produced. This is to ensure that nothing is inadvertently over-written!
     * Only projects starting with the letters "A" or "C" will be distributed. Those starting with "A" are distributed to the groups and those with "C" to Andreas (`[Paths]->DEEPDir`).
     * Projects starting with "B" are uploaded to the F\*EX server and an email with the link sent to "Uni"->"default" or "Uni"->"Schuele". The latter only occurs for DEEP data from the Scheule group.
+    * Projects starting with "A" are linked into Galaxy, if and only if the associated group has a data library with a "sequencing data" folder.
   10. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
     * Note the other options under `[Email]`, which specify the host name of the outgoing email server and the outgoing email address.
   11. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
@@ -102,6 +104,9 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
     * `pipeline` - A version number for this package
     * `bcl2fastq` - The version number of bcl2fastq from Illumina
     * `fastQC` - The version number of fastQC.
+  * `[Galaxy]`
+    * `API key` - The API key to use when contacting the Galaxy server. DO NOT SHARE THIS!
+    * `URL` - The galaxy server's URL (e.g., https://usegalaxy.org, though that'd obviously not work)
 
 A few general notes are in order:
   * Blank lines my be added pretty much anywhere.
@@ -116,6 +121,7 @@ This package has the following dependencies:
   * Python3 (python2 will explicitly not work, since some package and function names differ).
   * The configparser module
   * The reportlab module
+  * bioblend
   * numpy and matplotlib
   * bcl2fastq version 2+
   * fastq\_screen
