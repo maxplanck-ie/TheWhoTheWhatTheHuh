@@ -9,6 +9,7 @@ import bcl2fastq_pipeline.findFlowCells
 import bcl2fastq_pipeline.makeFastq
 import bcl2fastq_pipeline.afterFastq
 import bcl2fastq_pipeline.misc
+import bcl2fastq_pipeline.galaxy
 import importlib
 
 def sleep(config) :
@@ -21,6 +22,7 @@ while True:
     importlib.reload(bcl2fastq_pipeline.makeFastq)
     importlib.reload(bcl2fastq_pipeline.afterFastq)
     importlib.reload(bcl2fastq_pipeline.misc)
+    importlib.reload(bcl2fastq_pipeline.galaxy)
 
     #Read the config file
     config = bcl2fastq_pipeline.getConfig.getConfig()
@@ -90,6 +92,14 @@ while True:
         bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
         sleep(config)
         continue
+
+    # Upload to Galaxy
+    try :
+        message += bcl2fastq_pipline.galaxy.linkIntoGalaxy(config)
+    except:
+        syslog.syslog("Got an error while uploading to Galaxy!\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error while uploading to Galaxy!")
+        sleep(config)
 
     transferTime = datetime.datetime.now()-startTime
 
