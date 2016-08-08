@@ -3,6 +3,8 @@ from bioblend.galaxy import GalaxyInstance
 from bioblend.galaxy.objects import GalaxyInstance as GI
 import sys
 import os
+import glob
+import syslog
 
 
 def getLibID(gi, libName):
@@ -106,24 +108,22 @@ def getFileType(fName):
     return "auto"
 
 
-def checkExists(gi, gi2, libID, folderID, fName):
+def checkExists(datasets, folderID, fName):
     """
     Return true if there's a file named fName in a folder with folderID in side the library with ID libID. Otherwise, return False
 
-    It's a bit silly that this uses the object wrappers, while nothing else does, but so it goes.
+    For fastq.gz files, the file name in Galaxy might be lacking the .gz extension when we check...
     """
-    libName = gi.libraries.get_libraries(library_id=libID)[0]["name"]
-    l = gi2.libraries.list(name=libName)[0]
-    fName = os.path.basename(fName)
-
-    datasets = l.get_datasets()
     for dataset in datasets:
-        if dataset.name == fName and dataset.wrapped["folder_id"] == folderID:
-            return True
+        if dataset.wrapped["folder_id"] == folderID:
+            if dataset.name == os.path.basename(fName):
+                return True
+            if fName.endswith(".fastq.gz") and os.path.basename(fName)[:-3] == dataset.name:
+                return True
     return False
 
 
-def fileList(d):
+def getFiles(d):
     """
     Given a directory, return a list of all files in all subdirectories
     """
@@ -154,7 +154,7 @@ def linkIntoGalaxy(config):
         pname = project.split("/")[-1][8:]
         if(pname[0] == "A") :
             group = pname.split("_")[1].lower()
-            basePath = "{}/{}/sequencing_directory".format(config.get("Paths","groupDir"), group)
+            basePath = "{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)
 
             try:
                 libID = getLibID(gi, "{} sequencing data".format(group))
@@ -163,11 +163,16 @@ def linkIntoGalaxy(config):
                 continue
 
             try:
-                folderID = getFolderID(gi, libID, "/")
+                # memoize the datasets already in the library
+                _ = gi.libraries.get_libraries(library_id=libID)[0]["name"]
+                l = gi2.libraries.list(name=_)[0]
+                currentDatasets = l.get_datasets()
 
                 fileList = getFiles("{}/{}".format(basePath, config.get("Options", "runID")))
                 for fName in fileList:
-                    if checkExists(gi, gi2, libID, folderID, fName):
+                    basePath2 = os.path.dirname(fName)[len(basePath):]
+                    folderID = getFolderID(gi, libID, basePath2)
+                    if checkExists(currentDatasets, folderID, fName):
                         syslog.syslog("[linkIntoGalaxy] Skipping {}, already added\n".format(os.path.basename(fName)))
                         continue
                     f = addFileToLibraryFolder(gi, libID, folderID, fName, file_type=getFileType(fName))
