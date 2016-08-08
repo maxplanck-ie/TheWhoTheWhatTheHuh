@@ -171,10 +171,11 @@ def getOffSpecies(fname) :
             continue
         if(line[0].startswith("Library")) :
             continue
+        if(line[0].startswith("PhiX") or line[0].startswith("Adapters") or line[0].startswith("Vectors") or line[0].startswith("rRNA"):
+            continue
         species.append(line[0])
         ohol.append(float(line[5]))
-        #mhol.append(float(line[7]))
-        #if(ohol[maxi]+mhol[maxi] < ohol[i]+mhol[i]) :
+
         if(ohol[maxi] < ohol[i]) :
             maxi = i
         i += 1
@@ -182,7 +183,6 @@ def getOffSpecies(fname) :
     off = 0
     for i in range(len(ohol)) :
         if(i != maxi) :
-            #off += ohol[i] + mhol[i]
             off += ohol[i]
     return off
 
