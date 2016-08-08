@@ -171,7 +171,7 @@ def getOffSpecies(fname) :
             continue
         if(line[0].startswith("Library")) :
             continue
-        if(line[0].startswith("PhiX") or line[0].startswith("Adapters") or line[0].startswith("Vectors") or line[0].startswith("rRNA"):
+        if(line[0].startswith("PhiX") or line[0].startswith("Adapters") or line[0].startswith("Vectors") or line[0].startswith("rRNA")):
             continue
         species.append(line[0])
         ohol.append(float(line[5]))
