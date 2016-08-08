@@ -12,7 +12,12 @@ config = {
     'version': '0.2.2',
     'packages': ['bcl2fastq_pipeline'],
     'scripts': ['bin/bfq.py'],
-    'name': 'bcl2fastq_pipeline'
+    'name': 'bcl2fastq_pipeline',
+    'install_requires': ['configparser',
+                         'reportlab',
+                         'numpy',
+                         'matplotlib',
+                         'bioblend']
 }
 
 setup(**config)
