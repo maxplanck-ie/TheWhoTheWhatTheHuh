@@ -95,7 +95,7 @@ while True:
 
     # Upload to Galaxy
     try :
-        message += bcl2fastq_pipline.galaxy.linkIntoGalaxy(config)
+        message += bcl2fastq_pipeline.galaxy.linkIntoGalaxy(config)
     except:
         syslog.syslog("Got an error while uploading to Galaxy!\n")
         bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error while uploading to Galaxy!")

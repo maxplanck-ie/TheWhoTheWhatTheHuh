@@ -157,9 +157,9 @@ def linkIntoGalaxy(config):
             basePath = "{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)
 
             try:
-                libID = getLibID(gi, "{} sequencing data".format(group))
+                libID = getLibID(gi, "{} sequencing runs".format(group))
             except:
-                message += "\n{}\tNo sequencing data folder!".format(pname)
+                message += "\n{}\tNo sequencing data folder!".format(group)
                 continue
 
             try:
