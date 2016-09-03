@@ -56,16 +56,17 @@ def rewriteSampleSheet(config) :
     An appropriate "--sample-sheet blah --use-bases-mask foo" is returned
     '''
 
-    if(os.path.isfile("%s/%s/SampleSheet.csv" % (
-        config.get("Paths", "baseDir"),
-        config.get("Options", "runID")
-    ))) :
+    ssheet = config.get("Options", "sampleSheet")
+    if ssheet is None or ssheet == "":
+        ssheet = "%s/%s/SampleSheet.csv" % (config.get("Paths", "baseDir"), config.get("Options", "runID"))
+
+    if os.path.isfile(ssheet):
         od, oname = tempfile.mkstemp()
         config.set("Options", "sampleSheet", oname)
         of = open(oname, "w")
         inData = False
         inReads = 0
-        for line in codecs.open("%s/%s/SampleSheet.csv" % (config.get("Paths","baseDir"),config.get("Options","runID")), "r", "iso-8859-1") :
+        for line in codecs.open(ssheet, "r", "iso-8859-1"):
             if((line.startswith("Lane") or line.startswith("Sample_ID")) and (inData is False)) :
                 inData = True
             elif(line.startswith("[Reads]")) :
