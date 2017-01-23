@@ -37,15 +37,19 @@ The general workflow of this pipeline is as follows:
       3. `--interop-dir seqFacDir/runID/InterOp`: This prevents `bcl2fastq` from attempting to write to the running directory, which could be dangerous. See `[Paths]`->`seqFacDir` for where this is.
         * The sequencing facility has requested this directory. Note that the path will be created if it doesn't already exist.
   6. A number of "post make" steps are run. This terminology is a hold-over from the previous bcl2fastq pipeline, which used `make` to generate the fastq files.
-    1. FastQC is run on each output fastq file.
+    1. If a flow cell was run on the HiSeq 3000, optical duplicates are removed and placed in a separate file with clumpify.sh from bbmap.
+      * This has multiple workers, each of which is multithreaded. This is due to the program not nicely respecting thread settings and occasionally requesting gobs of memory.
+      * See `[Options]`->`deduplicateInstances` for the number of simultaneous instances.
+      * See `[bbmap]` for other related options
+    2. FastQC is run on each output fastq file.
       * This is run in a multithreaded manner, see `[Options]`->`postMakeThreads` for the number of workers.
       * See options under `[FastQC]` for executable paths and options.
       * The output is placed in `[Paths]`->`outputDir`/`runID`/FASTQC_project_name.
-    2. An md5sum is made of the fastq files in each project (see the file named "md5sums.txt").
+    3. An md5sum is made of the fastq files in each project (see the file named "md5sums.txt").
       * As with FastQC, this is multithreaded, with the number of workers threads set via `[Options]`->`postMakeThreads`.
-    3. A contamination screen is run with fastq_screen after downsampling read #1 of each sample.
-    4. Runs multiQC on the output of FastQC.
-    5. Additional steps can be added to `afterFastq.py`, though note that the package will need to be reinstalled and the process restarted.
+    4. A contamination screen is run with fastq_screen after downsampling read #1 of each sample.
+    5. Runs multiQC on the output of FastQC.
+    6. Additional steps can be added to `afterFastq.py`, though note that the package will need to be reinstalled and the process restarted.
   7. Xml files and FastQC outputs are copied to a location readable by the sequencing facility.
     * This is location is set via `[Paths]`->`seqFacDir` and things placed under a `runID` subdirectory, as was the case with `InterOp` above.
     * Currently, the xml files are `RunInfo.xml` and `runParameters.xml`.

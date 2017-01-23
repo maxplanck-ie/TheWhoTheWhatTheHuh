@@ -3,3 +3,4 @@ ToDo
 *.egg-info
 build
 dist
+splitFastq

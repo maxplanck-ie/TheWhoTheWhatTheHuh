@@ -6,6 +6,8 @@ import glob
 import sys
 import subprocess
 import os
+import os.path
+import shlex
 import shutil
 import xml.etree.ElementTree as ET
 import syslog
@@ -157,6 +159,39 @@ def multiqc_worker(d) :
     subprocess.check_call(cmd, shell=True)
     os.chdir(oldWd)
 
+def clumpify_worker(d) :
+    global localConfig
+    #This only needs to be run if this is a HiSeq3000 flowcell
+    FCid = config.get("Options", "runID")
+    if FCid[8] != "J":
+        return
+
+    config = localConfig
+    oldWd = os.getcwd()
+    os.chdir(d)
+    read1s = glob.glob("*/*_R1.fastq.gz") 
+    PE = 1
+    for r1 in read1s:
+        r2 = "{}_R2.fastq.gz".format(r1[:-12])
+        if os.path.exists(r2):
+            cmd = "{} in={} in2={} out={}/temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
+                                                                                r1, r2, os.path.dirname(r1),
+                                                                                config.get("bbmap", "clumpify_options"),
+                                                                                config.get("bbmap", "clumpify_HiSeq3000_dist"),
+                                                                                config.get("bbmap", "clumpify_threads"))
+        else:
+            PE = 0
+            cmd = "{} in={} out={}/temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
+                                                                         r1, os.path.dirname(r1),
+                                                                         config.get("bbmap", "clumpify_options"),
+                                                                         config.get("bbmap", "clumpify_HiSeq3000_dist"),
+                                                                         config.get("bbmap", "clumpify_threads"))
+        syslog.syslog("[clumpify_worker] Processing %s\n" % cmd)
+        subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(["splitFastq", "{}/temp.fq.gz".format(os.path.dirname(r1)), PE, r1[:-12])
+        os.remove("{}/temp.fq.gz".format(os.path.dirname(r1))
+    os.chdir(oldWd)
+
 def parserDemultiplexStats(config) :
     '''
     Parse DemultiplexingStats.xml under outputDir/Stats/ to get the
@@ -215,6 +250,12 @@ def postMakeSteps(config) :
     sampleFiles = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
     global localConfig
     localConfig = config
+
+    #Deduplicate if this is a HiSeq 3000 run
+    p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
+    p.map(clumpify_worker, projectDirs)
+    p.close()
+    p.join()
 
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
