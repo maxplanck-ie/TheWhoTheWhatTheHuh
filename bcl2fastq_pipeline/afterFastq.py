@@ -66,7 +66,7 @@ def plotFastqScreen(fname) :
     plt.title("%s" % fname.replace("_R1_screen.txt","").split("/")[-1])
     plt.ylabel("%")
     plt.ylim((0,105))
-    plt.xticks(ind+0.4, species, rotation="vertical")
+    plt.xticks(ind + 0.4, species, rotation="vertical")
     plt.yticks(np.arange(0,110,10))
     plt.legend((p4[0], p3[0], p2[0], p1[0]), ("repeat", "conserved", "multimap", "unique"))
     plt.tight_layout()
@@ -161,35 +161,32 @@ def multiqc_worker(d) :
 
 def clumpify_worker(d) :
     global localConfig
-    #This only needs to be run if this is a HiSeq3000 flowcell
-    FCid = config.get("Options", "runID")
-    if FCid[8] != "J":
-        return
-
     config = localConfig
     oldWd = os.getcwd()
     os.chdir(d)
-    read1s = glob.glob("*/*_R1.fastq.gz") 
+    read1s = glob.glob("*_R1.fastq.gz") 
     PE = 1
     for r1 in read1s:
         r2 = "{}_R2.fastq.gz".format(r1[:-12])
         if os.path.exists(r2):
-            cmd = "{} in={} in2={} out={}/temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
-                                                                                r1, r2, os.path.dirname(r1),
-                                                                                config.get("bbmap", "clumpify_options"),
-                                                                                config.get("bbmap", "clumpify_HiSeq3000_dist"),
-                                                                                config.get("bbmap", "clumpify_threads"))
+            cmd = "{} in={} in2={} out=temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
+                                                                                    r1, r2,
+                                                                                    config.get("bbmap", "clumpify_options"),
+                                                                                    config.get("bbmap", "clumpify_HiSeq3000_dist"),
+                                                                                    config.get("bbmap", "clumpify_threads"))
         else:
             PE = 0
-            cmd = "{} in={} out={}/temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
-                                                                         r1, os.path.dirname(r1),
-                                                                         config.get("bbmap", "clumpify_options"),
-                                                                         config.get("bbmap", "clumpify_HiSeq3000_dist"),
-                                                                         config.get("bbmap", "clumpify_threads"))
+            cmd = "{} in={} out=temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
+                                                                             r1,
+                                                                             config.get("bbmap", "clumpify_options"),
+                                                                             config.get("bbmap", "clumpify_HiSeq3000_dist"),
+                                                                             config.get("bbmap", "clumpify_threads"))
         syslog.syslog("[clumpify_worker] Processing %s\n" % cmd)
         subprocess.check_call(cmd, shell=True)
-        subprocess.check_call(["splitFastq", "{}/temp.fq.gz".format(os.path.dirname(r1)), PE, r1[:-12])
-        os.remove("{}/temp.fq.gz".format(os.path.dirname(r1))
+        cmd = " ".join(["splitFastq", "temp.fq.gz", "{}".format(PE), r1[:-12], "{}".format(config.get("bbmap", "pigzThreads"))])
+        syslog.syslog("[clumpify_worker] Splitting %s\n" % cmd)
+        subprocess.check_call(cmd, shell=True)
+        os.remove("temp.fq.gz")
     os.chdir(oldWd)
 
 def parserDemultiplexStats(config) :
@@ -252,10 +249,13 @@ def postMakeSteps(config) :
     localConfig = config
 
     #Deduplicate if this is a HiSeq 3000 run
-    p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
-    p.map(clumpify_worker, projectDirs)
-    p.close()
-    p.join()
+    if config.get("Options", "runID")[7] == "J":
+        sampleDirs = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+        sampleDirs = [os.path.dirname(x) for x in sampleDirs]
+        p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
+        p.map(clumpify_worker, sampleDirs)
+        p.close()
+        p.join()
 
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))

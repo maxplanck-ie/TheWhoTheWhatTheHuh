@@ -135,3 +135,5 @@ This package has the following dependencies:
   * md5sum must be present
   * The Pillow python module must be relatively up to date and functional (can't install in Ubuntu and have it work in CentOS).
   * There must be an available sendmail server somewhere. This package currently does not support authentication, but that could presumably be added.
+  * pigz
+  * splitFastq, which comes in this repository but must be compiled manually

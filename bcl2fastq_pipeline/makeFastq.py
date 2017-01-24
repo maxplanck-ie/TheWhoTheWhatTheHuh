@@ -203,8 +203,8 @@ def MakeTotalPDF(config) :
         config.get("Options","runID")), pagesize=A4)
     fM = Frame(pdf.leftMargin, pdf.bottomMargin, pdf.width, pdf.height, id="main")
 
-    tab = [["Project", "Sample", "confident off-species reads/sample"]]
-    txt = "\nProject\tSample\tconfident off-species reads/sample\n"
+    tab = [["Project", "Sample", "confident off-species reads/sample", "% Optical Duplication"]]
+    txt = "\nProject\tSample\tconfident off-species reads/sample\t% Optical Duplicates\n"
     elements = []
 
     projs = glob.glob("%s/%s/Project_*" % (
@@ -215,11 +215,18 @@ def MakeTotalPDF(config) :
     #Make the table
     for proj in projs :
         pname=proj.split("/")[-1]
-        txts = glob.glob("%s/Sample_*/*.txt" % proj)
+        txts = glob.glob("%s/Sample_*/*_screen.txt" % proj)
         txts.sort()
         for i in range(len(txts)) :
-            tab.append([pname, txts[i].split("/")[-2], "%5.2f" % getOffSpecies(txts[i])])
-            txt += "%s\t%s\t%5.2f\n" % (pname, txts[i].split("/")[-2], getOffSpecies(txts[i]))
+            # Get the percent optical duplication
+            _ = "{}.duplicate.txt".format(txts[i][:-14])
+            if os.path.exists(_):
+                _ = open(_).read().strip().split("\t")
+                duplicationRate = "{:5.2f}%".format((100.0 * int(_[0])) / int(_[1]))
+            else:
+                duplicationRate = "NA"
+            tab.append([pname, txts[i].split("/")[-2], "%5.2f" % getOffSpecies(txts[i]), duplicationRate])
+            txt += "%s\t%s\t%5.2f\t%s\n" % (pname, txts[i].split("/")[-2], getOffSpecies(txts[i]), duplicationRate)
     txt += "\n"
 
     #Add the table

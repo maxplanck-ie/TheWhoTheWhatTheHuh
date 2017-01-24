@@ -430,13 +430,13 @@ def getFCmetrics(root) :
         #Average base quality
         if(baseYield[1] > 0) :
             try:
-                message += "\t%4.1f/%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount),
-                    QualSum[1]/clusterCountPass/(baseYield[1]/clusterCount))
+                message += "\t%4.1f/%4.1f\n" % (QualSum[0]/float(baseYield[0]),
+                    QualSum[1]/float(baseYield[1]))
             except:
                 message += "\tNA/NA\n"
         else :
             try:
-                message += "\t%4.1f\n" % (QualSum[0]/clusterCountPass/(baseYield[0]/clusterCount))
+                message += "\t%4.1f\n" % (QualSum[0]/float(baseYield[0]))
             except:
                 message += "\tNA\n"
 
