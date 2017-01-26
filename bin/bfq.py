@@ -45,14 +45,16 @@ while True:
 
     startTime=datetime.datetime.now()
 
-    #Make the fastq files
-    try:
-        bcl2fastq_pipeline.makeFastq.bcl2fq(config)
-    except :
-        syslog.syslog("Got an error in bcl2fq\n")
-        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
-        sleep(config)
-        continue
+    #Make the fastq files, if not already done
+    if not os.path.exists("{}/{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"])):
+        try:
+            bcl2fastq_pipeline.makeFastq.bcl2fq(config)
+            open("{}/{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"]), "w").close()
+        except :
+            syslog.syslog("Got an error in bcl2fq\n")
+            bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
+            sleep(config)
+            continue
 
     #Run post-processing steps
     try :
