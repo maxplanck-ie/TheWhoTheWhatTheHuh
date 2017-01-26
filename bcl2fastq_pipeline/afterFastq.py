@@ -66,7 +66,7 @@ def plotFastqScreen(fname) :
     plt.title("%s" % fname.replace("_R1_screen.txt","").split("/")[-1])
     plt.ylabel("%")
     plt.ylim((0,105))
-    plt.xticks(ind + 0.4, species, rotation="vertical")
+    plt.xticks(ind, species, rotation="vertical")
     plt.yticks(np.arange(0,110,10))
     plt.legend((p4[0], p3[0], p2[0], p1[0]), ("repeat", "conserved", "multimap", "unique"))
     plt.tight_layout()
