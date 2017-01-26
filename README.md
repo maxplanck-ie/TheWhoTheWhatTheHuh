@@ -36,11 +36,13 @@ The general workflow of this pipeline is as follows:
         * This directory may be read only!
       3. `--interop-dir seqFacDir/runID/InterOp`: This prevents `bcl2fastq` from attempting to write to the running directory, which could be dangerous. See `[Paths]`->`seqFacDir` for where this is.
         * The sequencing facility has requested this directory. Note that the path will be created if it doesn't already exist.
+      4. The file named `bcl.done` in the output directory is touched. If the pipeline experiences an error and restarts then it will then skip the already completed demultiplexing step.
   6. A number of "post make" steps are run. This terminology is a hold-over from the previous bcl2fastq pipeline, which used `make` to generate the fastq files.
     1. If a flow cell was run on the HiSeq 3000, optical duplicates are removed and placed in a separate file with clumpify.sh from bbmap.
       * This has multiple workers, each of which is multithreaded. This is due to the program not nicely respecting thread settings and occasionally requesting gobs of memory.
       * See `[Options]`->`deduplicateInstances` for the number of simultaneous instances.
       * See `[bbmap]` for other related options
+      * This step creates a ".duplicate.txt" file for each sample. If the pipeline later experiences an error and sees such a file then this step will be skipped for the given sample (the step is resource intensive).
     2. FastQC is run on each output fastq file.
       * This is run in a multithreaded manner, see `[Options]`->`postMakeThreads` for the number of workers.
       * See options under `[FastQC]` for executable paths and options.
@@ -60,6 +62,7 @@ The general workflow of this pipeline is as follows:
     * Only projects starting with the letters "A" or "C" will be distributed. Those starting with "A" are distributed to the groups and those with "C" to Andreas (`[Paths]->DEEPDir`).
     * Projects starting with "B" are uploaded to the F\*EX server and an email with the link sent to "Uni"->"default" or "Uni"->"Schuele". The latter only occurs for DEEP data from the Scheule group.
     * Projects starting with "A" are linked into Galaxy, if and only if the associated group has a data library with a "sequencing data" folder.
+    * Output directories and files for projects starting with "A" have their permissions changed to ensure that groups do not have write access.
   10. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
     * Note the other options under `[Email]`, which specify the host name of the outgoing email server and the outgoing email address.
   11. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.

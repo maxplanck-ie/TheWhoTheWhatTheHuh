@@ -18,6 +18,7 @@ import sys
 import glob
 import pathlib
 import os
+import os.path
 import syslog
 import codecs
 
@@ -39,7 +40,7 @@ def transferData(config) :
                     group,
                     config.get("Options","runID")))
                 if(p.exists() == False) :
-                    p.mkdir(mode=0o770, parents=True)
+                    p.mkdir(mode=0o750, parents=True)
 
                 shutil.copytree(project, "%s/%s/sequencing_data/%s/%s" % (
                     config.get("Paths","groupDir"),
@@ -56,6 +57,16 @@ def transferData(config) :
                     group,
                     config.get("Options","runID"),
                     project.split("/")[-1]))
+
+                for r, dirs, files in os.walk("%s/%s/sequencing_data/%s" % (
+                    config.get("Paths","groupDir"),
+                    group,
+                    config.get("Options","runID"))):
+                    for d in dirs:
+                        os.chmod(os.path.join(r, d), stat.S_IRWXU | stat.S_RGRP | stat.S_XGRP)
+                    for f in files:
+                        os.chmod(os.path.join(r, f), stat.S_IRWXU | stat.S_RGRP)
+
                 message += "\n%s\ttransferred" % pname
             except :
                 message += "\n%s\tError during transfer!" % pname
