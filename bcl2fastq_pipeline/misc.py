@@ -63,9 +63,9 @@ def transferData(config) :
                     group,
                     config.get("Options","runID"))):
                     for d in dirs:
-                        os.chmod(os.path.join(r, d), stat.S_IRWXU | stat.S_RGRP | stat.S_XGRP)
+                        os.chmod(os.path.join(r, d), stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
                     for f in files:
-                        os.chmod(os.path.join(r, f), stat.S_IRWXU | stat.S_RGRP)
+                        os.chmod(os.path.join(r, f), stat.S_IRWXU | stat.S_IRGRP)
 
                 message += "\n%s\ttransferred" % pname
             except :
