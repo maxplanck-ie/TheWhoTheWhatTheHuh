@@ -20,6 +20,7 @@ import pathlib
 import os
 import os.path
 import syslog
+import stat
 import codecs
 
 def transferData(config) :
