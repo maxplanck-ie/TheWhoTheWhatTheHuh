@@ -165,14 +165,14 @@ def clumpify_worker(d) :
     oldWd = os.getcwd()
     os.chdir(d)
 
-    # This takes a while, don't duplicate work
-    if os.path.exists("{}.duplicate.txt".format(r1[:-12])):
-        os.chdir(oldWd)
-        return
-
     read1s = glob.glob("*_R1.fastq.gz") 
     PE = 1
     for r1 in read1s:
+        # This takes a while, don't duplicate work
+        if os.path.exists("{}.duplicate.txt".format(r1[:-12])):
+            os.chdir(oldWd)
+            return
+
         r2 = "{}_R2.fastq.gz".format(r1[:-12])
         if os.path.exists(r2):
             cmd = "{} in={} in2={} out=temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),

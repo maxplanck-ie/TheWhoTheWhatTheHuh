@@ -69,7 +69,8 @@ def transferData(config) :
 
                 message += "\n%s\ttransferred" % pname
             except :
-                message += "\n%s\tError during transfer!" % pname
+                e = sys.exc_info()
+                message += "\n%s\tError during transfer (%s: %s)!" % (pname, e[0], e[1])
         elif(pname[0] == "B") :
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
