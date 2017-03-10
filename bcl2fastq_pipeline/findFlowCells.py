@@ -12,13 +12,58 @@ import glob
 from email.mime.text import MIMEText
 import syslog
 
-#Returns 1 on processed, 0 on unprocessed
+#Returns True on processed, False on unprocessed
 def flowCellProcessed(config) :
     if(os.access("%s/%s/casava.finished" % (config.get("Paths","outputDir"), config.get("Options","runID")), os.F_OK)) :
         return True
     if(os.access("%s/%s/fastq.made" % (config.get("Paths","outputDir"), config.get("Options","runID")), os.F_OK)) :
         return True
     return False
+
+
+def getSampleSheets(d):
+    """
+    Provide a list of output directories and sample sheets
+    """
+    ss = glob.glob("%s/SampleSheet*.csv" % d)
+
+    if len(ss) == 0:
+        return ([None], [None])
+    elif len(ss) == 1:
+        return (ss, [None])
+
+    laneOut = []
+    for sheet in ss:
+        # get the lanes
+        lanes = []
+        f = open(sheet)
+        inData = False
+        lastLane = None
+        colNum = None
+        for line in f:
+            if inData is False:
+                if line.startswith("[Data]"):
+                    inData = True
+                    continue
+            else:
+                if colNum is None:
+                    cols = line.strip().split(",")
+                    if "Lane" in cols:
+                        colNum = cols.index("Lane")
+                        continue
+                    else:
+                        # No lanes, use them all
+                        laneOut.append("")
+                        break
+                else:
+                   cols = line.strip().split(",")
+                   if cols[colNum] not in lanes:
+                       lanes.append(int(cols[colNum]))
+        if len(lanes) > 0:
+            lanes = sorted(lanes)
+            laneOut.append(",".join(["{}".format(x) for x in lanes]))
+    return ss, laneOut
+
 
 '''
 Iterate over all folders in config.baseDir from machine SN7001180. For each,
@@ -42,12 +87,25 @@ def newFlowCell(config) :
         #Get the flow cell ID (e.g., 150416_SN7001180_0196_BC605HACXX)
         config.set('Options','runID',d.split("/")[-2])
 
-        if(flowCellProcessed(config) is False) :
-            syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
-            return config
-        else :
-            config.set("Options","runID","")
+        # Before 1703 only a single sample sheet was supported
+        if config.get("Options","runID")[:4] < "1703":
+            continue
+
+        sampleSheet, lanes = getSampleSheets(d)
+
+        for ss, lane in zip(sampleSheet, lanes):
+            if lanes is not None:
+                config.set("Options","lanes",lanes)
+            else:
+                config.set("Options","lanes","")
+    
+            if flowCellProcessed(config) is False:
+                syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
+                return config
+            else :
+                config.set("Options","runID","")
     return config
+
 
 def markFinished(config) :
     open("%s/%s/fastq.made" % (config["Paths"]["outputDir"], config["Options"]["runID"]), "w").close()
