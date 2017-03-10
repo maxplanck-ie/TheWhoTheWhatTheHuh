@@ -14,9 +14,11 @@ import syslog
 
 #Returns True on processed, False on unprocessed
 def flowCellProcessed(config) :
-    if(os.access("%s/%s/casava.finished" % (config.get("Paths","outputDir"), config.get("Options","runID")), os.F_OK)) :
-        return True
-    if(os.access("%s/%s/fastq.made" % (config.get("Paths","outputDir"), config.get("Options","runID")), os.F_OK)) :
+    if config.get("Options", "lanes") != "":
+        path = "%s/%s/fastq.made" % (config.get("Paths","outputDir"), config.get("Options","runID"))
+    else:
+        path = "%s/%s_lanes%s/fastq.made" % (config.get("Paths","outputDir"), config.get("Options","runID"), config.get("Options", "lanes"))
+    if os.access(path, os.F_OK):
         return True
     return False
 
@@ -94,13 +96,16 @@ def newFlowCell(config) :
         sampleSheet, lanes = getSampleSheets(d)
 
         for ss, lane in zip(sampleSheet, lanes):
-            if lanes is not None:
-                config.set("Options","lanes",lanes)
+            if lane is not None:
+                config.set("Options","lanes",lane)
             else:
                 config.set("Options","lanes","")
+            if ss is None:
+                ss = ''
     
             if flowCellProcessed(config) is False:
                 syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
+                config.set("Options","sampleSheet",ss)
                 return config
             else :
                 config.set("Options","runID","")

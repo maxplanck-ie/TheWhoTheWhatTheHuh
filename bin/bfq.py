@@ -36,6 +36,10 @@ while True:
         sleep(config)
         continue
 
+    for k, v in dict(config).items():
+        print(k)
+        print(dict(v))
+    break
     #Ensure we have sufficient space
     if(bcl2fastq_pipeline.misc.enoughFreeSpace(config) == False) :
         syslog.syslog("Error: insufficient free space!\n")

@@ -29,9 +29,14 @@ def determineMask(config):
      4. If there's no mask then return nothing
     '''
 
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "--tiles s_[{}]".format(lanes)
+
     mask = config.get("Options", "index_mask")
     if mask != "":
-        return "--use-bases-mask {}".format(mask)
+        return "--use-bases-mask {} {}".format(mask, lanes)
+
     elif os.path.isfile("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
         xml = ET.parse("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID")))
         root = xml.getroot()[0][3]
@@ -45,8 +50,8 @@ def determineMask(config):
                 else:
                     l.append("I{}".format(read.get("NumCycles")))
         if len(l) > 0:
-            return "--use-bases-mask {}".format(",".join(l))
-    return ""
+            return "--use-bases-mask {} {}".format(",".join(l), lanes)
+    return lanes
 
 def rewriteSampleSheet(config) :
     '''
