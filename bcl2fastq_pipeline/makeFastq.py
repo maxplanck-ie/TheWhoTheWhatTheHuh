@@ -28,15 +28,18 @@ def determineMask(config):
      3. Join the list by commas
      4. If there's no mask then return nothing
     '''
-
     lanes = config.get("Options", "lanes")
     if lanes != "":
-        lanes = "--tiles s_[{}]".format(lanes)
+        lanes2 = []
+        for l in lanes.split("_"):
+            lanes2.append("s_{}".format(l))
+        lanes = "--tiles {}".format(",".join(lanes2))
 
     mask = config.get("Options", "index_mask")
+    bcLens = [int(x) for x in config.get("Options","bcLen").split(",")]
+    bcNum = 0
     if mask != "":
         return "--use-bases-mask {} {}".format(mask, lanes)
-
     elif os.path.isfile("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
         xml = ET.parse("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID")))
         root = xml.getroot()[0][3]
@@ -45,10 +48,15 @@ def determineMask(config):
             if read.get("IsIndexedRead") == "N":
                 l.append("Y*")
             else:
-                if read.get("NumCycles") == "7":
-                    l.append("I6n")
+                nc = int(read.get("NumCycles"))
+                if nc > bcLens[bcNum]:
+                    if bcLens[bcNum] > 0:
+                        l.append("I{}{}".format(bcLens[bcNum], "n" * nc - bcLens[bcNum]))
+                    else:
+                        l.append("{}".format("n" * nc))
                 else:
-                    l.append("I{}".format(read.get("NumCycles")))
+                    l.append("I{}".format(bcLens[bcNum]))
+                bcNum += 1
         if len(l) > 0:
             return "--use-bases-mask {} {}".format(",".join(l), lanes)
     return lanes
@@ -110,7 +118,11 @@ def rewriteSampleSheet(config) :
         return None
 
 def fixNames(config) :
-    fnames = glob.glob("%s/%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+
+    fnames = glob.glob("%s/%s%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for fname in fnames :
         idx = fname.rindex("_")
         fnew = fname[0:idx]
@@ -118,14 +130,14 @@ def fixNames(config) :
         syslog.syslog("Moving %s to %s\n" % (fname, fnew))
         shutil.move(fname, fnew)
 
-    snames = glob.glob("%s/%s/[ABC][0-9]*/*" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    snames = glob.glob("%s/%s%s/[ABC][0-9]*/*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for sname in snames :
         idx = sname.rindex("/")
         snew = "%s/Sample_%s" % (sname[:idx], sname[idx+1:])
         syslog.syslog("Moving %s to %s\n" % (sname, snew))
         shutil.move(sname, snew)
 
-    pnames = glob.glob("%s/%s/[ABC][0-9]*" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    pnames = glob.glob("%s/%s%s/[ABC][0-9]*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for pname in pnames :
         idx = pname.rindex("/")
         pnew = "%s/Project_%s" % (pname[:idx], pname[idx+1:])
@@ -137,29 +149,35 @@ def bcl2fq(config) :
     takes things from /dont_touch_this/solexa_runs/XXX/Data/Intensities/BaseCalls
     and writes most output into config.outputDir/XXX, where XXX is the run ID.
     '''
+    lanes = config.get("Options", "lanes")
+    if lanes != '':
+        lanes = '_lanes{}'.format(lanes)
+        
     #Make the output directories
-    os.makedirs("%s/%s" % (config.get("Paths","outputDir"),config.get("Options","runID")), exist_ok=True)
-    os.makedirs("%s/%s/InterOp" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), exist_ok=True)
+    os.makedirs("%s/%s%s" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes), exist_ok=True)
+    os.makedirs("%s/%s%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes), exist_ok=True)
 
     #If there's no sample sheet then we need to not mask the last index base!
     rv = rewriteSampleSheet(config)
     mask = ""
     if(rv is not None) :
         mask = rv
-    cmd = "%s %s %s -o %s/%s -R %s/%s --interop-dir %s/%s/InterOp" % (
+    cmd = "%s %s %s -o %s/%s%s -R %s/%s --interop-dir %s/%s%s/InterOp" % (
         config.get("bcl2fastq","bcl2fastq"),
         config.get("bcl2fastq","bcl2fastq_options"),
         mask,
         config.get("Paths","outputDir"),
         config.get("Options","runID"),
+        lanes,
         config.get("Paths","baseDir"),
         config.get("Options","runID"),
         config.get("Paths","seqFacDir"),
-        config.get("Options","runID")
+        config.get("Options","runID"),
+        lanes
     )
     syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
-    logOut = open("%s/%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
-    logErr = open("%s/%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID")), "w")
+    logOut = open("%s/%s%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
+    logErr = open("%s/%s%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
     subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     logOut.close()
     logErr.close()
@@ -200,21 +218,26 @@ def MakeTotalPDF(config) :
 
     Also, parse the fastq_screen .txt files and calculate the per-sample off-species rate
     '''
+    lanes = config.get("Options", "lanes")
+    if lanes != '':
+        lanes = '_lanes{}'.format(lanes)
 
     stylesheet=getSampleStyleSheet()
 
-    pdf = BaseDocTemplate("%s/%s/ContaminationReport.pdf" % (
+    pdf = BaseDocTemplate("%s/%s%s/ContaminationReport.pdf" % (
         config.get("Paths","outputDir"),
-        config.get("Options","runID")), pagesize=A4)
+        config.get("Options","runID"),
+        lanes), pagesize=A4)
     fM = Frame(pdf.leftMargin, pdf.bottomMargin, pdf.width, pdf.height, id="main")
 
     tab = [["Project", "Sample", "confident off-species reads/sample", "% Optical Duplication"]]
     txt = "\nProject\tSample\tconfident off-species reads/sample\t% Optical Duplicates\n"
     elements = []
 
-    projs = glob.glob("%s/%s/Project_*" % (
+    projs = glob.glob("%s/%s%s/Project_*" % (
         config.get("Paths","outputDir"),
-        config.get("Options","runID")))
+        config.get("Options","runID"),
+        lanes))
     projs.sort()
 
     #Make the table
@@ -263,25 +286,29 @@ def cpSeqFac(config) :
     '''
     Copy over Xml and FastQC files
     '''
-    shutil.rmtree("%s/%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID")), ignore_errors=True)
-    shutil.copytree("%s/%s/InterOp" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))
+    lanes = config.get("Options", "lanes")
+    if lanes != '':
+        lanes = '_lanes{}'.format(lanes)
+
+    shutil.rmtree("%s/%s%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID"), lanes), ignore_errors=True)
+    shutil.copytree("%s/%s/InterOp" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
     #Xml
-    shutil.copy2("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))
+    shutil.copy2("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
     try:
-        shutil.copy2("%s/%s/runParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))
+        shutil.copy2("%s/%s/runParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
     except:
         #renamed on a Nextseq
-        shutil.copy2("%s/%s/RunParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))
+        shutil.copy2("%s/%s/RunParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
 
     #Make the PDF
     txt = MakeTotalPDF(config)
-    shutil.copy2("%s/%s/ContaminationReport.pdf" % (config.get("Paths","outputDir"), config.get("Options","runID")), "%s/%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID")))
+    shutil.copy2("%s/%s%s/ContaminationReport.pdf" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
 
     #FastQC
-    dirs = glob.glob("%s/%s/FASTQC_*" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    dirs = glob.glob("%s/%s%s/FASTQC_*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for d in dirs :
         dname = d.split("/")[-1]
-        shutil.rmtree("%s/%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), dname), ignore_errors=True)
-        shutil.copytree(d, "%s/%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), dname))
+        shutil.rmtree("%s/%s%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes, dname), ignore_errors=True)
+        shutil.copytree(d, "%s/%s%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes, dname))
 
     return txt

@@ -9,7 +9,7 @@ config = {
     'author': 'Devon Ryan',
     'url': 'github.com/',
     'author_email': 'ryan@ie-freiburg.mpg.de.',
-    'version': '0.2.5',
+    'version': '0.3.0',
     'packages': ['bcl2fastq_pipeline'],
     'scripts': ['bin/bfq.py'],
     'name': 'bcl2fastq_pipeline',

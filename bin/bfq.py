@@ -36,10 +36,6 @@ while True:
         sleep(config)
         continue
 
-    for k, v in dict(config).items():
-        print(k)
-        print(dict(v))
-    break
     #Ensure we have sufficient space
     if(bcl2fastq_pipeline.misc.enoughFreeSpace(config) == False) :
         syslog.syslog("Error: insufficient free space!\n")
@@ -50,10 +46,13 @@ while True:
     startTime=datetime.datetime.now()
 
     #Make the fastq files, if not already done
-    if not os.path.exists("{}/{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"])):
+    lanes = config["Options"]["lanes"]
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+    if not os.path.exists("{}/{}{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes)):
         try:
             bcl2fastq_pipeline.makeFastq.bcl2fq(config)
-            open("{}/{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"]), "w").close()
+            open("{}/{}{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes), "w").close()
         except :
             syslog.syslog("Got an error in bcl2fq\n")
             bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
@@ -94,12 +93,12 @@ while True:
     try : 
         message += bcl2fastq_pipeline.misc.transferData(config)
     except :
-        syslog.syslog("Got an error during distributeData\n")
-        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
+        syslog.syslog("Got an error during transferData\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during transferData")
         sleep(config)
         continue
 
-    # Upload to Galaxy
+    #Upload to Galaxy
     try :
         message += bcl2fastq_pipeline.galaxy.linkIntoGalaxy(config)
     except:

@@ -27,8 +27,12 @@ def transferData(config) :
     """
     Distribute fastq and fastQC files to users.
     """
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+
     message = ""
-    projects = glob.glob("%s/%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    projects = glob.glob("%s/%s%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     for project in projects :
         pname = project.split("/")[-1][8:]
         if(pname[0] == "A") :
@@ -36,33 +40,38 @@ def transferData(config) :
             group = pname.split("_")[1].lower()
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
-                p = pathlib.Path("%s/%s/sequencing_data/%s" % (
+                p = pathlib.Path("%s/%s/sequencing_data/%s%s" % (
                     config.get("Paths","groupDir"),
                     group,
-                    config.get("Options","runID")))
+                    config.get("Options","runID"),
+                    lanes))
                 if(p.exists() == False) :
                     p.mkdir(mode=0o750, parents=True)
 
-                shutil.copytree(project, "%s/%s/sequencing_data/%s/%s" % (
+                shutil.copytree(project, "%s/%s/sequencing_data/%s%s/%s" % (
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1]))
 
-                shutil.copytree("%s/%s/FASTQC_%s" % (
+                shutil.copytree("%s/%s%s/FASTQC_%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1])
-                    , "%s/%s/sequencing_data/%s/FASTQC_%s" % (
+                    , "%s/%s/sequencing_data/%s%s/FASTQC_%s" % (
                     config.get("Paths","groupDir"),
                     group,
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1]))
 
-                for r, dirs, files in os.walk("%s/%s/sequencing_data/%s" % (
+                for r, dirs, files in os.walk("%s/%s/sequencing_data/%s%s" % (
                     config.get("Paths","groupDir"),
                     group,
-                    config.get("Options","runID"))):
+                    config.get("Options","runID"),
+                    lanes)):
                     for d in dirs:
                         os.chmod(os.path.join(r, d), stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
                     for f in files:
@@ -80,19 +89,20 @@ def transferData(config) :
                     recipient = config.get("Uni","Schuele")
                 else:
                     recipient = config.get("Uni","default")
-                cmd = "tar cf - %s/%s/FASTQC_%s %s/%s/%s | fexsend -s %s_%s.tar %s" % (
+                cmd = "tar cf - %s/%s%s/FASTQC_%s %s/%s%s/%s | fexsend -s %s%s_%s.tar %s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1],
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1],
                     config.get("Options", "runID"),
+                    lanes,
                     project.split("/")[-1],
                     recipient)
                 rv = os.system(cmd)
-                #if rv != 0:
-                #    assert(1==0)
                 message += "\n%s\ttransferred (return code %s from command '%s')" % (pname, rv, cmd)
             except :
                 # fexsend doesn't return 0 on success
@@ -100,28 +110,33 @@ def transferData(config) :
         elif(pname[0] == "C") :
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
-                p = pathlib.Path("%s/sequencing_data/%s" % (
+                p = pathlib.Path("%s/sequencing_data/%s%s" % (
                     config.get("Paths","DEEPDir"),
-                    config.get("Options","runID")))
+                    config.get("Options","runID"),
+                    lanes))
                 if(p.exists() == False) :
                     p.mkdir(mode=0o770, parents=True)
 
-                shutil.copytree("%s/%s/FASTQC_%s" % (
+                shutil.copytree("%s/%s%s/FASTQC_%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1]),
-                    "%s/sequencing_data/%s/FASTQC_%s" % (
+                    "%s/sequencing_data/%s%s/FASTQC_%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1]))
 
-                shutil.copytree("%s/%s/%s" % (
+                shutil.copytree("%s/%s%s/%s" % (
                     config.get("Paths","outputDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1])
-                    , "%s/sequencing_data/%s/%s" % (
+                    , "%s/sequencing_data/%s%s/%s" % (
                     config.get("Paths","DEEPDir"),
                     config.get("Options","runID"),
+                    lanes,
                     project.split("/")[-1]))
                 message += "\n%s\ttransferred" % pname
             except :
@@ -181,14 +196,18 @@ def makeProjectPDF(node, project, config) :
       * Average base quality
     For paired-end datasets, the last two columns are repeated and named differently.
     """
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+
     st = getSampleIDNameProjectLaneTuple(config)
 
     stylesheet=getSampleStyleSheet()
 
-    pdf = BaseDocTemplate("%s/%s/Project_%s/SequencingReport.pdf" % (
-        config.get("Paths","outputDir"),config.get("Options","runID"),
+    pdf = BaseDocTemplate("%s/%s%s/Project_%s/SequencingReport.pdf" % (
+        config.get("Paths","outputDir"),config.get("Options","runID"), lanes,
         project), pagesize=landscape(A4))
-    topHeight=100 #The image is 86 pixels tall
+    topHeight=120 #The image is 86 pixels tall
     fTL = Frame(pdf.leftMargin, pdf.height, width=pdf.width/2, height=topHeight, id="col1") #Fixed height
     fTR = Frame(pdf.leftMargin+pdf.width/2, pdf.height, width=pdf.width/2, height=topHeight, id="col2")
     fB = Frame(pdf.leftMargin, pdf.bottomMargin, pdf.width, pdf.height-topHeight, id="bottom")
@@ -210,6 +229,19 @@ def makeProjectPDF(node, project, config) :
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
     string = "Flow cell ID: %s" % (config.get("Options","runID"))
+    p = Paragraph(string, style=stylesheet['Normal'])
+    elements.append(p)
+    FC = config.get("Options", "runID")
+    if FC[7] == 'M':
+        string = "Sequencer type: MiSeq"
+    elif FC[7:9] == 'NB':
+        string = "Sequencer type: NextSeq 500"
+    elif FC[7:9] == 'SN':
+        string = "Sequencer type: HiSeq 2500"
+    elif FC[7] == 'J':
+        string = "Sequencer type: HiSeq 3000"
+    else:
+        string = "Sequencer type: Unknown"
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
     string = "BCL2Fastq pipeline version: %s" % (config.get("Version","pipeline"))
@@ -381,9 +413,10 @@ def makeProjectPDF(node, project, config) :
     elements.append(Spacer(0,30))
     elements.append(Paragraph("Note that as the mouse and human reference genomes are the best quality, many low complexity reads will align to them.", stylesheet['Normal']))
     elements.append(Spacer(0,30))
-    fqs = glob.glob("%s/%s/Project_%s/*/*.png" % (
+    fqs = glob.glob("%s/%s%s/Project_%s/*/*.png" % (
         config.get("Paths","outputDir"),
         config.get("Options","runID"),
+        lanes,
         project))
     fqs.sort()
     for fq in fqs:
@@ -461,8 +494,12 @@ def parseConversionStats(config) :
      1) A PDF file for each project
      2) A message that will be included in the email message
     """
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+
     try :
-        tree = ET.parse("%s/%s/Stats/ConversionStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+        tree = ET.parse("%s/%s%s/Stats/ConversionStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         root = tree.getroot()[0] #We only ever have a single flow cell
     except :
         return None
@@ -498,13 +535,17 @@ def errorEmail(config, errTuple, msg) :
     s.quit()
 
 def finishedEmail(config, msg, runTime, transferTime) :
-    message = "Flow cell: %s\n" % config.get("Options","runID")
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+
+    message = "Flow cell: %s%s\n" % (config.get("Options","runID"), lanes)
     message += "Run time: %s\n" % runTime
     message += "Data transfer: %s\n" % transferTime
     message += msg
 
     msg = MIMEText(message)
-    msg['Subject'] = "[bcl2fastq_pipeline] %s processed" % config.get("Options","runID")
+    msg['Subject'] = "[bcl2fastq_pipeline] %s%s processed" % (config.get("Options","runID"), lanes)
     msg['From'] = config.get("Email","fromAddress")
     msg['To'] = config.get("Email","finishedTo")
 

@@ -82,6 +82,10 @@ def fastq_screen_worker(fname) :
     if(bname[-12:] == "_R2.fastq.gz") :
         return
 
+    #If the image is already there, then skip
+    if os.path.exists("{}_screen.png".format(fname[:-9])) and os.path.exists("{}_screen.txt".format(fname[:-9])):
+        return
+
     #Subsample
     ofile=fname.replace("_R1.fastq.gz","subsampled.fastq")
     cmd = "%s sample %s %s %s" % (
@@ -95,7 +99,7 @@ def fastq_screen_worker(fname) :
     o.close()
 
     #fastq_screen
-    cmd = "%s %s %s" % (
+    cmd = "%s %s '%s'" % (
         config.get("fastq_screen", "fastq_screen_command"),
         config.get("fastq_screen", "fastq_screen_options"),
         ofile)
@@ -112,18 +116,34 @@ def fastq_screen_worker(fname) :
 def FastQC_worker(fname) :
     global localConfig
     config = localConfig
+    lanes = config.get("Options", "lanes")
+    if lanes != "": 
+        lanes = "_lanes{}".format(lanes)
+
     projectName = fname.split("/")[-3] #It's the penultimate directory
     libName = fname.split("/")[-2] #The last directory
-    cmd = "%s %s -o %s/%s/FASTQC_%s/%s %s" % (
+    cmd = "%s %s -o %s/%s%s/FASTQC_%s/%s %s" % (
           config.get("FastQC","fastqc_command"),
           config.get("FastQC","fastqc_options"),
           config.get("Paths","outputDir"),
           config.get("Options","runID"),
+          lanes,
           projectName,
           libName,
           fname)
-    os.makedirs("%s/%s/FASTQC_%s/%s" % (config.get("Paths","outputDir"),
+
+    # Skip if the output exists
+    if os.path.exists("%s/%s%s/FASTQC_%s/%s/%s_fastqc.zip" % (config.get("Paths","outputDir"),
           config.get("Options","runID"),
+          lanes,
+          projectName,
+          libName,
+          os.path.basename(fname)[:-9])):
+        return
+
+    os.makedirs("%s/%s%s/FASTQC_%s/%s" % (config.get("Paths","outputDir"),
+          config.get("Options","runID"),
+          lanes,
           projectName,
           libName), exist_ok=True)
     syslog.syslog("[FastQC_worker] Running %s\n" % cmd)
@@ -204,9 +224,13 @@ def parserDemultiplexStats(config) :
     Sample "all" and Project "all" Sample "all", as the former gives the total
     undetermined and the later simply the total clusters
     '''
+    lanes = config.get("Options", "lanes")
+    if lanes != "": 
+        lanes = "_lanes{}".format(lanes)
+
     totals = [0,0,0,0,0,0,0,0]
     undetermined = [0,0,0,0,0,0,0,0]
-    tree = ET.parse("%s/%s/Stats/DemultiplexingStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    tree = ET.parse("%s/%s%s/Stats/DemultiplexingStats.xml" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     root = tree.getroot()
     for child in root[0].findall("Project") :
         if(child.get("name") == "default") :
@@ -247,21 +271,27 @@ def postMakeSteps(config) :
     Other steps could easily be added to follow those. Note that this function
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
+    lanes = config.get("Options", "lanes")
+    if lanes != "": 
+        lanes = "_lanes{}".format(lanes)
 
-    projectDirs = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID")))
+    projectDirs = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     projectDirs = toDirs(projectDirs)
-    sampleFiles = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    sampleFiles = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     global localConfig
     localConfig = config
 
     #Deduplicate if this is a HiSeq 3000 run
     if config.get("Options", "runID")[7] == "J":
-        sampleDirs = glob.glob("%s/%s/Project_[ABC][0-9]*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+        sampleDirs = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
         p.map(clumpify_worker, sampleDirs)
         p.close()
         p.join()
+
+    # Avoid running post-processing (in case of a previous error) on optical duplicate files.
+    sampleFiles = [x for x in sampleFiles if "optical_duplicates" not in x]
 
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
