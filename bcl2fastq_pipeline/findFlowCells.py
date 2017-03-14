@@ -131,6 +131,7 @@ def newFlowCell(config) :
                 return config
             else :
                 config.set("Options","runID","")
+    config.set("Options","runID","")
     return config
 
 
