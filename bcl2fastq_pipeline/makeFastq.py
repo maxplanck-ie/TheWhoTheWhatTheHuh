@@ -51,7 +51,7 @@ def determineMask(config):
                 nc = int(read.get("NumCycles"))
                 if nc > bcLens[bcNum]:
                     if bcLens[bcNum] > 0:
-                        l.append("I{}{}".format(bcLens[bcNum], "n" * nc - bcLens[bcNum]))
+                        l.append("I{}{}".format(bcLens[bcNum], "n" * (nc - bcLens[bcNum])))
                     else:
                         l.append("{}".format("n" * nc))
                 else:
@@ -181,7 +181,6 @@ def bcl2fq(config) :
     subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
     logOut.close()
     logErr.close()
-    fixNames(config)
 
 def getOffSpecies(fname) :
     total = 0

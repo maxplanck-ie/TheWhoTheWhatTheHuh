@@ -59,6 +59,17 @@ while True:
             sleep(config)
             continue
 
+    #Fix the file names (prepend "Project_" and "Sample_" and such as appropriate)
+    if not os.path.exists("{}/{}{}/files.renamed".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes)):
+        try:
+            bcl2fastq_pipeline.makeFastq.fixNames(config)
+            open("{}/{}{}/files.renamed".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes), "w").close()
+        except :
+            syslog.syslog("Got an error in fixNames\n")
+            bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in fixNames")
+            sleep(config)
+            continue
+
     #Run post-processing steps
     try :
         message = bcl2fastq_pipeline.afterFastq.postMakeSteps(config)
