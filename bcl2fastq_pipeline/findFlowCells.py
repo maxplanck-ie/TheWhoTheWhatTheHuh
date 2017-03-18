@@ -32,8 +32,6 @@ def getSampleSheets(d):
 
     if len(ss) == 0:
         return ([None], [None], [''])
-    elif len(ss) == 1:
-        return (ss, [None], [''])
 
     laneOut = []
     bcLens = []
@@ -69,6 +67,7 @@ def getSampleSheets(d):
                     if "index2" in cols:
                         indexCols[1] = cols.index("index2")
                         lastLine = True
+                    lastLine = True
 
                 if "Lane" in cols:
                     colNum = cols.index("Lane")
@@ -81,6 +80,8 @@ def getSampleSheets(d):
         if len(lanes) > 0:
             lanes = sorted(lanes)
             laneOut.append("_".join(["{}".format(x) for x in lanes]))
+    if len(ss) == 1:
+        laneOut = [None]
     return ss, laneOut, bcLens
 
 
@@ -120,7 +121,7 @@ def newFlowCell(config) :
                 config.set("Options","lanes","")
             if ss is None:
                 ss = ''
-            if bcLen is not None:
+            if bcLen is not None and bcLen is not '':
                 config.set("Options","bcLen",bcLen)
             else:
                 config.set("Options","bcLen","0,0")
