@@ -142,6 +142,9 @@ def linkIntoGalaxy(config):
       2) Link all samples, preserving directory structures
       3) TODO: Handle Galaxy stripping off the .gz file extension
     """
+    lanes = config.get("Options", "lanes")
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
 
     url = config.get("Galaxy", "URL")
     userKey = config.get("Galaxy", "API key")
@@ -149,7 +152,7 @@ def linkIntoGalaxy(config):
     gi2 = GI(url=url, api_key=userKey)
 
     message = "\n"
-    projects = glob.glob("%s/%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID")))
+    projects = glob.glob("%s/%s%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     for project in projects :
         pname = project.split("/")[-1][8:]
         if(pname[0] == "A") :
@@ -168,7 +171,7 @@ def linkIntoGalaxy(config):
                 l = gi2.libraries.list(name=_)[0]
                 currentDatasets = l.get_datasets()
 
-                fileList = getFiles("{}/{}".format(basePath, config.get("Options", "runID")))
+                fileList = getFiles("{}/{}{}".format(basePath, config.get("Options", "runID"), lanes))
                 for fName in fileList:
                     basePath2 = os.path.dirname(fName)[len(basePath):]
                     folderID = getFolderID(gi, libID, basePath2)

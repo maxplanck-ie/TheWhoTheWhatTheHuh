@@ -46,13 +46,27 @@ while True:
     startTime=datetime.datetime.now()
 
     #Make the fastq files, if not already done
-    if not os.path.exists("{}/{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"])):
+    lanes = config["Options"]["lanes"]
+    if lanes != "":
+        lanes = "_lanes{}".format(lanes)
+    if not os.path.exists("{}/{}{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes)):
         try:
             bcl2fastq_pipeline.makeFastq.bcl2fq(config)
-            open("{}/{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"]), "w").close()
+            open("{}/{}{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes), "w").close()
         except :
             syslog.syslog("Got an error in bcl2fq\n")
             bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in bcl2fq")
+            sleep(config)
+            continue
+
+    #Fix the file names (prepend "Project_" and "Sample_" and such as appropriate)
+    if not os.path.exists("{}/{}{}/files.renamed".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes)):
+        try:
+            bcl2fastq_pipeline.makeFastq.fixNames(config)
+            open("{}/{}{}/files.renamed".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes), "w").close()
+        except :
+            syslog.syslog("Got an error in fixNames\n")
+            bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error in fixNames")
             sleep(config)
             continue
 
@@ -90,12 +104,12 @@ while True:
     try : 
         message += bcl2fastq_pipeline.misc.transferData(config)
     except :
-        syslog.syslog("Got an error during distributeData\n")
-        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during distributeData")
+        syslog.syslog("Got an error during transferData\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error during transferData")
         sleep(config)
         continue
 
-    # Upload to Galaxy
+    #Upload to Galaxy
     try :
         message += bcl2fastq_pipeline.galaxy.linkIntoGalaxy(config)
     except:
