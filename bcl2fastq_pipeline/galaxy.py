@@ -22,42 +22,41 @@ def getLibID(gi, libName):
     return lib[0]["id"]
 
 
-def getFolderID(gi, libID, path):
+def getFolderID(gi, folderDict, libID, path):
     """
     Given a library ID (lib) and a path (e.g., "/foo/bar/sniggly3"), return the folder ID for sniggly3.
     
     If the path doesn't exist (in part or in total), then create it.
     """
     # Does the path already exist?
-    folders = gi.libraries.get_folders(libID, name=path)
-    if folders is not None and len(folders) > 0:
-        return folders[0]["id"]
+    if path in folderDict:
+        return folderDict[path][0]
     
     # Get the closest base folder
-    longest = gi.libraries.get_folders(libID, name="/")[0]
-    folders = gi.libraries.get_folders(libID)
-    for folder in folders:
-        if path.startswith(folder["name"]):
-            # Look for the longest pathname overlap. The next character in path MUST be "/",
-            # since otherwise adding "/a/b/c2" when "/a/b/c" exists would result in "/a/b/c/2"!
-            if len(folder["name"]) > len(longest["name"]) and path[len(folder["name"])] == "/":
-                longest = folder
-
-    # shorten the path name if relevant
-    idx = len(longest["name"])
-    pathLeft = path[idx:]
-    if pathLeft.startswith("/"):
-        pathLeft = pathLeft[1:]
-
-    for fName in pathLeft.split("/"):
-        gi.libraries.create_folder(libID, fName, base_folder_id=longest["id"]) # returns None
-        if longest["name"] != "/":
-            newFName = "{}/{}".format(longest["name"], fName)
+    longest = None
+    longestID = None
+    dirs = [x for x in path.split("/") if x != ""]  # Strip out "" in the split
+    l = len(dirs)
+    while l >= 0:
+        foo = "/{}".format("/".join(dirs[:l]))
+        if foo in folderDict:
+            longest = foo
+            longestID = folderDict[foo][0]
+            break
+        l = l - 1
+    
+    
+    pathLeft = path[len(longest):]
+    for fName in pathLeft.strip("/").split("/"):
+        rv = gi.libraries.create_folder(libID, fName, base_folder_id=longestID) # returns a dict!
+        if longest != "/":
+            longest = "{}/{}".format(longest, fName)
         else:
-            newFName = "/{}".format(fName)
-        longest = gi.libraries.get_folders(libID, name=newFName)[0]
+            longest = "/{}".format(fName)
+        longestID = rv[0]['id']
+        folderDict[longest] = [longestID]
 
-    return longest["id"]
+    return longestID
 
 
 def addFileToLibraryFolder(gi, libID, folderID, fileName, file_type='auto', dbkey='?', link=True, roles=''):
@@ -85,20 +84,6 @@ def addFileToLibraryFolder(gi, libID, folderID, fileName, file_type='auto', dbke
     return rv
 
 
-def addFileToLibrary(gi, libraryName, path, fileName, file_type='auto', dbkey='?', link=True, roles=''):
-    """
-    Add fileName to path in libraryName. gi is a GalaxyInstance
-    
-    The other parameters are passed to upload_from_galaxy_filesystem()
-    """
-    libID = getLibID(gi, libraryName)
-    folderID = getFolderID(gi, libID, path)
-    dataset = addFileToLibraryFolder(gi, libID, folderID, fileName, file_type=file_type, dbkey=dbkey, link=link, roles='')
-    if not dataset:
-        raise RuntimeError("Error adding '{}' to '{}'".format(fileName, path))
-    return dataset
-
-
 def getFileType(fName):
     """
     If the file name ends with .fastq.gz then return 'fastqsanger'. Otherwise, return 'auto'.
@@ -108,18 +93,13 @@ def getFileType(fName):
     return "auto"
 
 
-def checkExists(datasets, folderID, fName):
+def checkExists(datasetDict, folderID, fName):
     """
     Return true if there's a file named fName in a folder with folderID in side the library with ID libID. Otherwise, return False
-
-    For fastq.gz files, the file name in Galaxy might be lacking the .gz extension when we check...
     """
-    for dataset in datasets:
-        if dataset.wrapped["folder_id"] == folderID:
-            if dataset.name == os.path.basename(fName):
-                return True
-            if fName.endswith(".fastq.gz") and os.path.basename(fName)[:-3] == dataset.name:
-                return True
+    if fName in datasetDict:
+        if folderID in datasetDict[fName]:
+            return True
     return False
 
 
@@ -145,7 +125,7 @@ def linkIntoGalaxy(config):
     lanes = config.get("Options", "lanes")
     if lanes != "":
         lanes = "_lanes{}".format(lanes)
-
+ 
     url = config.get("Galaxy", "URL")
     userKey = config.get("Galaxy", "API key")
     gi = GalaxyInstance(url=url, key=userKey)
@@ -169,16 +149,43 @@ def linkIntoGalaxy(config):
                 # memoize the datasets already in the library
                 _ = gi.libraries.get_libraries(library_id=libID)[0]["name"]
                 l = gi2.libraries.list(name=_)[0]
-                currentDatasets = l.get_datasets()
+
+                currentDatasets = l.get_datasets() # A list of LibraryDataset() objects, which takes a while to return
+                                                   # Has a folder_id and file_name
+                                                   # Can the folders themselves be memoized? Then we can also hash folder IDs and add file names as a list.
+                # Make a dict() out of the datasets
+                dataDict = {}
+                for dataset in currentDatasets:
+                    if dataset.wrapped['file_name'] in dataDict:
+                        dataDict[dataset.wrapped['file_name']].append(dataset.wrapped['folder_id'])
+                    else:
+                        dataDict[dataset.wrapped['file_name']] = [dataset.wrapped['folder_id']]
+                folders = gi.libraries.get_folders(libID)
+
+                # Make a dict() out of the folders
+                folderDict = {}
+                for folder in folders:
+                    if folder['name'] == '/':
+		        # Otherwise / becomes ""
+                        folderDict[folder['name']] = [folder['id']]
+                        continue
+                    if folder['name'].rstrip("/") in folderDict:
+                        folderDict[folder['name'].rstrip("/")].append(folder['id'])
+                    else:
+                        folderDict[folder['name'].rstrip("/")] = [folder['id']]
 
                 fileList = getFiles("{}/{}{}".format(basePath, config.get("Options", "runID"), lanes))
                 for fName in fileList:
                     basePath2 = os.path.dirname(fName)[len(basePath):]
-                    folderID = getFolderID(gi, libID, basePath2)
-                    if checkExists(currentDatasets, folderID, fName):
+                    folderID = getFolderID(gi, folderDict, libID, basePath2)
+                    if checkExists(dataDict, folderID, fName):
                         syslog.syslog("[linkIntoGalaxy] Skipping {}, already added\n".format(os.path.basename(fName)))
                         continue
                     f = addFileToLibraryFolder(gi, libID, folderID, fName, file_type=getFileType(fName))
+                    if fName in dataDict:
+                        dataDict[fName].append(folderID)
+                    else:
+                        dataDict[fName] = [folderID]
                 message += "\n{}\tSuccessfully uploaded to Galaxy".format(pname)
             except:
                 message += "\n{}\tError during Galaxy upload".format(pname)
