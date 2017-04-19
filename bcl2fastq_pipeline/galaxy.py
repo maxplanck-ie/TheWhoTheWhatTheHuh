@@ -89,7 +89,7 @@ def getFileType(fName):
     If the file name ends with .fastq.gz then return 'fastqsanger'. Otherwise, return 'auto'.
     """
     if fName.endswith(".fastq.gz") or fName.endswith(".fq.gz"):
-        return "fastqsanger"
+        return "fastqsanger.gz"
     return "auto"
 
 
