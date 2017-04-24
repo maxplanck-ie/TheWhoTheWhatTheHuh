@@ -103,12 +103,15 @@ def checkExists(datasetDict, folderID, fName):
     return False
 
 
-def getFiles(d):
+def getFiles(d, pname):
     """
-    Given a directory, return a list of all files in all subdirectories
+    Given a directory and a project name, return a list of all files in all subdirectories
     """
     files = []
-    for (dpath, dnames, filenames) in os.walk(d):
+    for (dpath, dnames, filenames) in os.walk("{}/Project_{}".format(d, pname)):
+        for fname in filenames:
+            files.append("{}/{}".format(dpath, fname))
+    for (dpath, dnames, filenames) in os.walk("{}/FASTQC_Project_{}".format(d, pname)):
         for fname in filenames:
             files.append("{}/{}".format(dpath, fname))
     return files
@@ -174,7 +177,7 @@ def linkIntoGalaxy(config):
                     else:
                         folderDict[folder['name'].rstrip("/")] = [folder['id']]
 
-                fileList = getFiles("{}/{}{}".format(basePath, config.get("Options", "runID"), lanes))
+                fileList = getFiles("{}/{}{}".format(basePath, config.get("Options", "runID"), lanes), pname)
                 for fName in fileList:
                     basePath2 = os.path.dirname(fName)[len(basePath):]
                     folderID = getFolderID(gi, folderDict, libID, basePath2)
