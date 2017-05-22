@@ -43,6 +43,7 @@ def getSampleSheets(d):
         lastLine = None
         colNum = None
         indexCols = [None, None]
+        bcLensAppended = False
         for line in f:
             bcLen = '0,0'
             if inData is False:
@@ -59,6 +60,7 @@ def getSampleSheets(d):
                     else:
                         bcLen += ",0"
                     bcLens.append(bcLen)
+                    bcLensAppended = True
                     lastLine = False
 
                 # Handle barcodes (once)
@@ -80,6 +82,9 @@ def getSampleSheets(d):
         if len(lanes) > 0:
             lanes = sorted(lanes)
             laneOut.append("_".join(["{}".format(x) for x in lanes]))
+        if bcLensAppended == False:
+            # This only happens with runs having no Lane or index in the sample sheet
+            bcLens.append(None)
     if len(ss) == 1:
         laneOut = [None]
     return ss, laneOut, bcLens
