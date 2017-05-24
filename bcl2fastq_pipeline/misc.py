@@ -156,6 +156,10 @@ def getSampleIDNameProjectLaneTuple(config) :
     """
     samples = []
     inBottom = False
+    sampleIDcol = None
+    sampleNameCol = None
+    laneCol = None
+    projectNameCol = None
     if(config.get("Options", "sampleSheet") == "" or os.path.isfile(config.get("Options", "sampleSheet")) == False) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] No sample sheet! This *must* be an unindexed project.\n")
         return None
@@ -164,10 +168,17 @@ def getSampleIDNameProjectLaneTuple(config) :
         if len(line) == 0:
             continue
         if(inBottom) :
-            samples.append([line[1],line[2],line[0],line[7]])
+            samples.append([line[sampleIDcol],line[sampleNameCol],line[laneCol],line[projectNameCol]])
         else :
-            if(line[0] == "Lane") :
-                inBottom = True
+            if "Lane" in line:
+                try:
+                    laneCol = line.index("Lane")
+                    sampleIDcol = line.index("Sample_ID")
+                    sampleNameCol = line.index("Sample_Name")
+                    projectNameCol = line.index("Sample_Project")
+                    inBottom = True
+                except:
+                    pass
     if(inBottom is False) :
         syslog.syslog("[getSampleIDNameProjectLaneTuple] Apparently the sample sheet couldn't properly be parsed.\n")
         return None
