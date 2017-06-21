@@ -122,7 +122,7 @@ def fixNames(config) :
     if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
-    fnames = glob.glob("%s/%s%s/[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
+    fnames = glob.glob("%s/%s%s/*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for fname in fnames :
         idx = fname.rindex("_")
         fnew = fname[0:idx]
@@ -130,15 +130,19 @@ def fixNames(config) :
         syslog.syslog("Moving %s to %s\n" % (fname, fnew))
         shutil.move(fname, fnew)
 
-    snames = glob.glob("%s/%s%s/[ABC][0-9]*/*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
+    snames = glob.glob("%s/%s%s/*/*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for sname in snames :
+        if sname.split("/")[-2] in ["Reports", "Stats"]:
+            continue
         idx = sname.rindex("/")
         snew = "%s/Sample_%s" % (sname[:idx], sname[idx+1:])
         syslog.syslog("Moving %s to %s\n" % (sname, snew))
         shutil.move(sname, snew)
 
-    pnames = glob.glob("%s/%s%s/[ABC][0-9]*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
+    pnames = glob.glob("%s/%s%s/*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     for pname in pnames :
+        if pname.split("/")[-1] in ["Reports", "Stats"]:
+            continue
         idx = pname.rindex("/")
         pnew = "%s/Project_%s" % (pname[:idx], pname[idx+1:])
         syslog.syslog("Moving %s to %s\n" % (pname, pnew))
