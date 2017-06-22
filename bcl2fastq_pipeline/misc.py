@@ -35,9 +35,11 @@ def transferData(config) :
     projects = glob.glob("%s/%s%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     for project in projects :
         pname = project.split("/")[-1][8:]
-        if(pname[0] == "A") :
-            #Copy
-            group = pname.split("_")[1].lower()
+        group = pname.split("_")[-1].lower()
+        syslog.syslog("[transferData] Transferring %s\n" % pname)
+
+        if os.path.exists("{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)):
+            #Local group
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
                 p = pathlib.Path("%s/%s/sequencing_data/%s%s" % (
@@ -81,7 +83,8 @@ def transferData(config) :
             except :
                 e = sys.exc_info()
                 message += "\n%s\tError during transfer (%s: %s)!" % (pname, e[0], e[1])
-        elif(pname[0] == "B") :
+        else:
+            #Upload with FEX
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
                 # The Schuele group has its own person that should get these
@@ -107,42 +110,6 @@ def transferData(config) :
             except :
                 # fexsend doesn't return 0 on success
                 message += "\n%s\ttransferred (return code %s from command '%s')" % (pname, rv, cmd)
-        elif(pname[0] == "C") :
-            syslog.syslog("[transferData] Transferring %s\n" % pname)
-            try :
-                p = pathlib.Path("%s/sequencing_data/%s%s" % (
-                    config.get("Paths","DEEPDir"),
-                    config.get("Options","runID"),
-                    lanes))
-                if(p.exists() == False) :
-                    p.mkdir(mode=0o770, parents=True)
-
-                shutil.copytree("%s/%s%s/FASTQC_%s" % (
-                    config.get("Paths","outputDir"),
-                    config.get("Options","runID"),
-                    lanes,
-                    project.split("/")[-1]),
-                    "%s/sequencing_data/%s%s/FASTQC_%s" % (
-                    config.get("Paths","DEEPDir"),
-                    config.get("Options","runID"),
-                    lanes,
-                    project.split("/")[-1]))
-
-                shutil.copytree("%s/%s%s/%s" % (
-                    config.get("Paths","outputDir"),
-                    config.get("Options","runID"),
-                    lanes,
-                    project.split("/")[-1])
-                    , "%s/sequencing_data/%s%s/%s" % (
-                    config.get("Paths","DEEPDir"),
-                    config.get("Options","runID"),
-                    lanes,
-                    project.split("/")[-1]))
-                message += "\n%s\ttransferred" % pname
-            except :
-                message += "\n%s\tError during transfer!" % pname
-        else :
-            message += "\n%s\tskipped" % pname
     return message
 
 def getSampleIDNameProjectLaneTuple(config) :

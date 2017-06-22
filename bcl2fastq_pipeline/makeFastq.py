@@ -143,6 +143,8 @@ def fixNames(config) :
     for pname in pnames :
         if pname.split("/")[-1] in ["Reports", "Stats"]:
             continue
+        if not os.path.isdir(pname):
+            continue
         idx = pname.rindex("/")
         pnew = "%s/Project_%s" % (pname[:idx], pname[idx+1:])
         syslog.syslog("Moving %s to %s\n" % (pname, pnew))

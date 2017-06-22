@@ -313,15 +313,15 @@ def postMakeSteps(config) :
     if lanes != "": 
         lanes = "_lanes{}".format(lanes)
 
-    projectDirs = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
+    projectDirs = glob.glob("%s/%s%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
     projectDirs = toDirs(projectDirs)
-    sampleFiles = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
+    sampleFiles = glob.glob("%s/%s%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     global localConfig
     localConfig = config
 
     #Deduplicate if this is a HiSeq 3000 run
     if config.get("Options", "runID")[7] == "J":
-        sampleDirs = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
+        sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
         p.map(clumpify_worker, sampleDirs)
@@ -329,7 +329,7 @@ def postMakeSteps(config) :
         p.join()
     #Different deduplication for NextSeq samples
     elif config.get("Options", "runID")[7:9] == "NB":
-        sampleDirs = glob.glob("%s/%s%s/Project_[ABC][0-9]*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
+        sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
         p.map(clumpifyNextSeq_worker, sampleDirs)

@@ -138,58 +138,59 @@ def linkIntoGalaxy(config):
     projects = glob.glob("%s/%s%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     for project in projects :
         pname = project.split("/")[-1][8:]
-        if(pname[0] == "A") :
-            group = pname.split("_")[1].lower()
-            basePath = "{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)
+        group = pname.split("_")[-1].lower()
+        basePath = "{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)
+        if not os.path.exists(basePath):
+            continue
 
-            try:
-                libID = getLibID(gi, "{} sequencing runs".format(group))
-            except:
-                message += "\n{}\tNo sequencing data folder!".format(group)
-                continue
+        try:
+            libID = getLibID(gi, "{} sequencing runs".format(group))
+        except:
+            message += "\n{}\tNo sequencing data folder!".format(group)
+            continue
 
-            try:
-                # memoize the datasets already in the library
-                _ = gi.libraries.get_libraries(library_id=libID)[0]["name"]
-                l = gi2.libraries.list(name=_)[0]
+        try:
+            # memoize the datasets already in the library
+            _ = gi.libraries.get_libraries(library_id=libID)[0]["name"]
+            l = gi2.libraries.list(name=_)[0]
 
-                currentDatasets = l.get_datasets() # A list of LibraryDataset() objects, which takes a while to return
-                                                   # Has a folder_id and file_name
-                                                   # Can the folders themselves be memoized? Then we can also hash folder IDs and add file names as a list.
-                # Make a dict() out of the datasets
-                dataDict = {}
-                for dataset in currentDatasets:
-                    if dataset.wrapped['file_name'] in dataDict:
-                        dataDict[dataset.wrapped['file_name']].append(dataset.wrapped['folder_id'])
-                    else:
-                        dataDict[dataset.wrapped['file_name']] = [dataset.wrapped['folder_id']]
-                folders = gi.libraries.get_folders(libID)
+            currentDatasets = l.get_datasets() # A list of LibraryDataset() objects, which takes a while to return
+                                               # Has a folder_id and file_name
+                                               # Can the folders themselves be memoized? Then we can also hash folder IDs and add file names as a list.
+            # Make a dict() out of the datasets
+            dataDict = {}
+            for dataset in currentDatasets:
+                if dataset.wrapped['file_name'] in dataDict:
+                    dataDict[dataset.wrapped['file_name']].append(dataset.wrapped['folder_id'])
+                else:
+                    dataDict[dataset.wrapped['file_name']] = [dataset.wrapped['folder_id']]
+            folders = gi.libraries.get_folders(libID)
 
-                # Make a dict() out of the folders
-                folderDict = {}
-                for folder in folders:
-                    if folder['name'] == '/':
-		        # Otherwise / becomes ""
-                        folderDict[folder['name']] = [folder['id']]
-                        continue
-                    if folder['name'].rstrip("/") in folderDict:
-                        folderDict[folder['name'].rstrip("/")].append(folder['id'])
-                    else:
-                        folderDict[folder['name'].rstrip("/")] = [folder['id']]
+            # Make a dict() out of the folders
+            folderDict = {}
+            for folder in folders:
+                if folder['name'] == '/':
+                    # Otherwise / becomes ""
+                    folderDict[folder['name']] = [folder['id']]
+                    continue
+                if folder['name'].rstrip("/") in folderDict:
+                    folderDict[folder['name'].rstrip("/")].append(folder['id'])
+                else:
+                    folderDict[folder['name'].rstrip("/")] = [folder['id']]
 
-                fileList = getFiles("{}/{}{}".format(basePath, config.get("Options", "runID"), lanes), pname)
-                for fName in fileList:
-                    basePath2 = os.path.dirname(fName)[len(basePath):]
-                    folderID = getFolderID(gi, folderDict, libID, basePath2)
-                    if checkExists(dataDict, folderID, fName):
-                        syslog.syslog("[linkIntoGalaxy] Skipping {}, already added\n".format(os.path.basename(fName)))
-                        continue
-                    f = addFileToLibraryFolder(gi, libID, folderID, fName, file_type=getFileType(fName))
-                    if fName in dataDict:
-                        dataDict[fName].append(folderID)
-                    else:
-                        dataDict[fName] = [folderID]
-                message += "\n{}\tSuccessfully uploaded to Galaxy".format(pname)
-            except:
-                message += "\n{}\tError during Galaxy upload".format(pname)
+            fileList = getFiles("{}/{}{}".format(basePath, config.get("Options", "runID"), lanes), pname)
+            for fName in fileList:
+                basePath2 = os.path.dirname(fName)[len(basePath):]
+                folderID = getFolderID(gi, folderDict, libID, basePath2)
+                if checkExists(dataDict, folderID, fName):
+                    syslog.syslog("[linkIntoGalaxy] Skipping {}, already added\n".format(os.path.basename(fName)))
+                    continue
+                f = addFileToLibraryFolder(gi, libID, folderID, fName, file_type=getFileType(fName))
+                if fName in dataDict:
+                    dataDict[fName].append(folderID)
+                else:
+                    dataDict[fName] = [folderID]
+            message += "\n{}\tSuccessfully uploaded to Galaxy".format(pname)
+        except:
+            message += "\n{}\tError during Galaxy upload".format(pname)
     return message
