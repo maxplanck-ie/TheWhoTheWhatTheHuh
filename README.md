@@ -62,10 +62,9 @@ The general workflow of this pipeline is as follows:
      * Everything about these PDFs is hard-coded. In an ideal world, this would have some sort of plugin interface.
   10. FastQC and fastq files are copied to the group directories, under `sequencing_data/`.
       * If the directories already exist then an error is produced. This is to ensure that nothing is inadvertently over-written!
-      * Only projects starting with the letters "A" or "C" will be distributed. Those starting with "A" are distributed to the groups and those with "C" to Andreas (`[Paths]->DEEPDir`).
-      * Projects starting with "B" are uploaded to the F\*EX server and an email with the link sent to "Uni"->"default" or "Uni"->"Schuele". The latter only occurs for DEEP data from the Scheule group.
-      * Projects starting with "A" are linked into Galaxy, if and only if the associated group has a data library with a "sequencing data" folder.
-      * Output directories and files for projects starting with "A" have their permissions changed to ensure that groups do not have write access.
+      * Projects with a matching local group (a subdirectory in `[Paths]`->`outputDir`) are transfered and linked into Galaxy
+      * Projects with no matching group are uploaded to the F\*EX server and an email with the link sent to "Uni"->"default".
+      * Projects with a matching local group have Output directories and files for projects starting with "A" have their permissions changed to ensure that groups do not have write access.
   11. A summary email is produced (largely by parsing `Stats/DemultiplexingStats.xml`) and sent to the email addresses specified via `[Email]`->`finishedTo`.
       * Note the other options under `[Email]`, which specify the host name of the outgoing email server and the outgoing email address.
   12. A file named `fastq.made` is produced in `[Paths]`->`outputDir`/`runID`/.
@@ -88,7 +87,6 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
     * `outputDir` - The base directory where the demultiplexed fastq files and fastQC/md5sum output should be written.
     * `seqFacDir` - The base directory readable by the sequencing facility, for the files they're interested in.
     * `groupDir` - The base directory holding all group's datasets (currently, this should be `/data` for us).
-    * `DEEPDir` - The base directory holding all DEEP datasets.
     * `logDir` - The demultiplexing log for each run is written here.
   * `[FastQC]`
     * `fastqc_command` - Either just `fastqc` or possibly the full path, as appropriate.
