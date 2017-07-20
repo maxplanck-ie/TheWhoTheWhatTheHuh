@@ -258,8 +258,8 @@ def MakeTotalPDF(config) :
                 duplicationRate = "{:5.2f}%".format((100.0 * int(_[0])) / int(_[1]))
             else:
                 duplicationRate = "NA"
-            tab.append([pname, txts[i].split("/")[-2], "%5.2f" % getOffSpecies(txts[i]), duplicationRate])
-            txt += "%s\t%s\t%5.2f\t%s\n" % (pname, txts[i].split("/")[-2], getOffSpecies(txts[i]), duplicationRate)
+            tab.append([pname, txts[i].split("/")[-1][:-11], "%5.2f" % getOffSpecies(txts[i]), duplicationRate])
+            txt += "%s\t%s\t%5.2f\t%s\n" % (pname, txts[i].split("/")[-1][:-11], getOffSpecies(txts[i]), duplicationRate)
     txt += "\n"
 
     #Add the table
