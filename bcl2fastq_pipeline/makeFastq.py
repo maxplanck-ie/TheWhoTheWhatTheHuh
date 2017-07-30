@@ -89,6 +89,8 @@ def rewriteSampleSheet(config) :
             elif(inReads==2) :
                 inReads = 0
             elif(inData) :
+                #' ' to _
+                line = line.replace(" ", "_")
                 #. to _dot_
                 line = line.replace(".", "_dot_")
                 #+ to _plus_
