@@ -108,6 +108,8 @@ def rewriteSampleSheet(config) :
                 line = line.replace("ß", "sz")
                 #& to _and_
                 line = line.replace("&", "_and_")
+                #' to nothing
+                line = line.replace("'", "")
             else :
                 if(line.startswith("Adapter")) :
                     continue
