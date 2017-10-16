@@ -11,9 +11,20 @@ import bcl2fastq_pipeline.afterFastq
 import bcl2fastq_pipeline.misc
 import bcl2fastq_pipeline.galaxy
 import importlib
+import signal
+from threading import Event
+
+gotHUP = Event()
+
+def breakSleep(signo, _frame):
+    gotHUP.set()
 
 def sleep(config) :
-    time.sleep(float(config['Options']['sleepTime'])*60*60)
+    gotHUP.wait(timeout=float(config['Options']['sleepTime'])*60*60)
+    gotHUP.clear()
+    #time.sleep(float(config['Options']['sleepTime'])*60*60)
+
+signal.signal(SIGHUP, breakSleep)
 
 while True:
     #Reimport to allow reloading a new version
