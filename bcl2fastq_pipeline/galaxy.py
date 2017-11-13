@@ -131,7 +131,12 @@ def linkIntoGalaxy(config):
  
     url = config.get("Galaxy", "URL")
     userKey = config.get("Galaxy", "API key")
-    gi = GalaxyInstance(url=url, key=userKey)
+    verify = config.get("Galaxy", "verify")
+    if verify in ['True', 'true', 'T', 't']:
+        verify = True
+    else:
+        verify = False
+    gi = GalaxyInstance(url=url, key=userKey, verify=verify)
     gi2 = GI(url=url, api_key=userKey)
 
     message = "\n"

@@ -79,6 +79,11 @@ The following files have special meanings if found in an output directory:
  * `*.duplicate.txt`: Produced by clumpify. If it exists then clumpify won't be run
  * `fastq.made`: The flow cell is finished
 
+Restarting
+==========
+
+To wake a sleeping `bfq.py`, one can simply `kill -HUP pid`, where `pid` is its process ID. This will wake the process immediately.
+
 Configuration file
 ==================
 The configuration file is a human readable text file named `bcl2fastq.ini` and must be placed in the home directory (`~/`) of the user running this package. Currently, the file has the following sections:
@@ -125,6 +130,7 @@ The configuration file is a human readable text file named `bcl2fastq.ini` and m
   * `[Galaxy]`
     * `API key` - The API key to use when contacting the Galaxy server. DO NOT SHARE THIS!
     * `URL` - The galaxy server's URL (e.g., https://usegalaxy.org, though that'd obviously not work)
+    * `verify` - Whether SSL certificates should be verified
 
 A few general notes are in order:
   * Blank lines my be added pretty much anywhere.
