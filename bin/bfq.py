@@ -22,9 +22,8 @@ def breakSleep(signo, _frame):
 def sleep(config) :
     gotHUP.wait(timeout=float(config['Options']['sleepTime'])*60*60)
     gotHUP.clear()
-    #time.sleep(float(config['Options']['sleepTime'])*60*60)
 
-signal.signal(SIGHUP, breakSleep)
+signal.signal(signal.SIGHUP, breakSleep)
 
 while True:
     #Reimport to allow reloading a new version
