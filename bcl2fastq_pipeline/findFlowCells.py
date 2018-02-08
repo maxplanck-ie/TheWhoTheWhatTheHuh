@@ -267,7 +267,7 @@ def newFlowCell(config) :
                 odir = "{}/{}{}".format(config.get("Paths", "outputDir"), config.get("Options", "runID"), lanesUse)
                 if not os.path.exists(odir):
                     os.makedirs(odir)
-                if ss is not None:
+                if ss is not None and not os.path.exists("{}/SampleSheet.csv".format(odir)):
                     o = open("{}/SampleSheet.csv".format(odir), "w")
                     o.write(ss)
                     o.close()

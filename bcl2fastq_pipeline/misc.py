@@ -36,6 +36,9 @@ def transferData(config) :
     for project in projects :
         pname = project.split("/")[-1][8:]
         group = pname.split("_")[-1].lower()
+        if "-" in group:
+            # Handle things like cabezas-wallschied -> cabezas
+            group =  group.split("-")[0]
         syslog.syslog("[transferData] Transferring %s\n" % pname)
 
         if os.path.exists("{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)):
