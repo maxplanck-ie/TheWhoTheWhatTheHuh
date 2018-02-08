@@ -37,7 +37,7 @@ def getNumLanes(d):
         return 1
 
 
-# For MiSeq and HiSeq 2500 runs, the i5 primer must be reverse complemented
+# For MiSeq and HiSeq 2500/3000 runs, the i5 primer must be reverse complemented
 def mustRevComp(d):
     FCID = d.strip("/").split("/")[-1]
     # The type is designated by the first 1-2 letters of the machine name
@@ -45,6 +45,8 @@ def mustRevComp(d):
     if t.startswith("M"):
         return True
     elif t.startswith("SN"):
+        return True
+    elif t.startswith("J"):
         return True
     return False
 
