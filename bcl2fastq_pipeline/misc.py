@@ -533,3 +533,46 @@ def finishedEmail(config, msg, runTime, transferTime) :
     s = smtplib.SMTP(config.get("Email","host"))
     s.send_message(msg)
     s.quit()
+
+def jsonParkour(config, msg):
+    d = dict()
+    d['flowcell_id'] = config.get("Options", "runID").split("_")[-1]
+
+    # For each lane:
+    # - % clusters passing filter (OK)
+    # - number reads passing filter (OK)
+    # - undetermined indices (%) (OK)
+    # - % PhiX (unknowable?)
+    # - read 1 %bases >=Q30 (OK)
+    # - read 2 %bases >=Q30 (OK)
+
+    laneDict = dict()
+    for line in msg.split("\n"):
+        if line.startswith("Lane\t# Clusters (% pass)"):
+            continue
+        if "had undetermined" in line:
+            cols = line.split(" ")
+            lane = "Lane {}".format(cols[1][:-1])
+            if lane not in laneDict:
+                laneDict[lane] = dict()
+            percent = cols[-1].strip("(").strip(")")
+            readsPF = cols[4]
+            laneDict[lane]["undetermined_indices"] = percent
+            laneDict[lane]["reads_pf"] = readsPF
+        else:
+            cols = line.split("\t")
+            lane = cols[0]
+            clusterPF = cols[1].split()[-1].strip("(").strip(")").strip("%")
+            cols2 = cols[2].split("/")
+            read1q30 = cols2[0][:-1]
+            read2q30 = None
+            if len(cols2) == 2:
+                read2q30 = cols2[1][:-1]
+            laneDict[lane]["read_1"] = read1q30
+            laneDict[lane]["read_2"] = read2q30
+            laneDict[lane]["cluster_pf"] = clusterPF
+            laneDict[lane]["aligned_splike_in"] = None
+            laneDict[lane]["name"] = lane
+
+    d['matrix'] = laneDict.values()
+    print(d)

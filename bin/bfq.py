@@ -129,6 +129,13 @@ while True:
 
     transferTime = datetime.datetime.now()-startTime
 
+    #Update parkour, errors are non-fatal here
+    try:
+        bcl2fastq_pipeline.misc.jsonParkour(config, message)
+    except:
+        syslog.syslog("Received an error while updating Parkour!\n")
+        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error while updating Parkour!")
+
     #Email finished message
     try :
         bcl2fastq_pipeline.misc.finishedEmail(config, message, runTime, transferTime)
