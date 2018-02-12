@@ -579,7 +579,7 @@ def jsonParkour(config, msg):
 
     d['matrix'] = json.dump(laneDict.values())
     res = requests.post(config.get("parkour", "URL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), data=d)
-    if res = {'success': True}:
+    if res == {'success': True}:
         return "\nParkour: updated\n"
     else:
         return "\nParkour: parkour returned {}\n".format(res)
