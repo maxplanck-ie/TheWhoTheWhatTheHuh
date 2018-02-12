@@ -552,6 +552,8 @@ def jsonParkour(config, msg):
     for line in msg.split("\n"):
         if line.startswith("Lane\t# Clusters (% pass)"):
             continue
+        if not line.startswith("Lane"):
+            continue
         if "had undetermined" in line:
             cols = line.split(" ")
             lane = "Lane {}".format(cols[1][:-1])
@@ -573,7 +575,6 @@ def jsonParkour(config, msg):
             laneDict[lane]["read_1"] = read1q30
             laneDict[lane]["read_2"] = read2q30
             laneDict[lane]["cluster_pf"] = clusterPF
-            laneDict[lane]["aligned_splike_in"] = None
             laneDict[lane]["name"] = lane
 
     d['matrix'] = json.dump(laneDict.values())
