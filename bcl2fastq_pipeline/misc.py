@@ -22,6 +22,8 @@ import os.path
 import syslog
 import stat
 import codecs
+import requests
+import json
 
 def transferData(config) :
     """
@@ -574,5 +576,9 @@ def jsonParkour(config, msg):
             laneDict[lane]["aligned_splike_in"] = None
             laneDict[lane]["name"] = lane
 
-    d['matrix'] = laneDict.values()
-    print(d)
+    d['matrix'] = json.dump(laneDict.values())
+    res = requests.post(config.get("parkour", "URL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), data=d)
+    if res = {'success': True}:
+        return "\nParkour: updated\n"
+    else:
+        return "\nParkour: parkour returned {}\n".format(res)
