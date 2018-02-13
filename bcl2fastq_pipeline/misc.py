@@ -538,7 +538,7 @@ def finishedEmail(config, msg, runTime, transferTime) :
 
 def jsonParkour(config, msg):
     d = dict()
-    d['flowcell_id'] = config.get("Options", "runID").split("_")[-1]
+    d['flowcell_id'] = config.get("Options", "runID").split("_")[3][1:-1]
 
     # For each lane:
     # - % clusters passing filter (OK)
@@ -577,9 +577,9 @@ def jsonParkour(config, msg):
             laneDict[lane]["cluster_pf"] = clusterPF
             laneDict[lane]["name"] = lane
 
-    d['matrix'] = json.dump(laneDict.values())
+    d['matrix'] = json.dumps(list(laneDict.values()))
     res = requests.post(config.get("parkour", "URL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), data=d)
-    if res == {'success': True}:
+    if res.status_code == 200:
         return "\nParkour: updated\n"
     else:
-        return "\nParkour: parkour returned {}\n".format(res)
+        return "\nParkour: parkour returned {}, status {}\nSent: {}".format(res.text, res.status_code, d)
