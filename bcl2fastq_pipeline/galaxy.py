@@ -197,5 +197,5 @@ def linkIntoGalaxy(config):
                     dataDict[fName] = [folderID]
             message += "\n{}\tSuccessfully uploaded to Galaxy".format(pname)
         except:
-            message += "\n{}\tError during Galaxy upload".format(pname)
+            message += "\n{}\tError during Galaxy upload ({}\t{})".format(pname, sys.exc_info()[0], sys.exc_info()[1])
     return message

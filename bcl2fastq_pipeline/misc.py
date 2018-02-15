@@ -538,7 +538,10 @@ def finishedEmail(config, msg, runTime, transferTime) :
 
 def jsonParkour(config, msg):
     d = dict()
-    d['flowcell_id'] = config.get("Options", "runID").split("_")[3][1:-1]
+    d['flowcell_id'] = config.get("Options", "runID").split("_")[3][1:]
+    if "-" in d['flowcell_id']:
+        # MiSeq runs need to have 000000- stripped from the front
+        d['flowcell_id'] = d['flowcell_id'].split('-')[-1]
 
     # For each lane:
     # - % clusters passing filter (OK)
