@@ -137,14 +137,14 @@ def linkIntoGalaxy(config):
     else:
         verify = False
     gi = GalaxyInstance(url=url, key=userKey, verify=verify)
-    gi2 = GI(url=url, api_key=userKey)
+    gi2 = GI(url=url, api_key=userKey, verify=verify)
 
     message = "\n"
     projects = glob.glob("%s/%s%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     for project in projects :
         pname = project.split("/")[-1][8:]
         group = pname.split("_")[-1].lower()
-        basePath = "{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)
+        basePath = os.path.join(config.get("Paths","groupDir"), group, "sequencing_data")
         if not os.path.exists(basePath):
             continue
 

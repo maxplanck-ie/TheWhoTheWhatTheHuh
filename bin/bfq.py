@@ -13,7 +13,10 @@ import bcl2fastq_pipeline.galaxy
 import importlib
 import signal
 from threading import Event
+import urllib3
 
+# Disable excess warning messages if we disable SSL checks
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 gotHUP = Event()
 
 def breakSleep(signo, _frame):
