@@ -191,12 +191,13 @@ def handleRevComp(d, basePath):
             # See what the total is if we used the barcodes as given
             for line in d2[lane]:
                 line = line.split(",")
+                # The .strip() stuff is due to one flow cell having extra spaces in it.
                 if hasLane:
-                    bcF = "{}{}".format(line[3], line[4])
-                    bcR = "{}{}".format(line[3], revComp(line[4]))
+                    bcF = "{}{}".format(line[3].strip(), line[4].strip())
+                    bcR = "{}{}".format(line[3].strip(), revComp(line[4].strip()))
                 else:
-                    bcF = "{}{}".format(line[2], line[3])
-                    bcR = "{}{}".format(line[2], revComp(line[3]))
+                    bcF = "{}{}".format(line[2].strip(), line[3].strip())
+                    bcR = "{}{}".format(line[2].strip(), revComp(line[3].strip()))
                 if bcF in barcodes:
                     totF += barcodes[bcF]
                 if bcR in barcodes:
@@ -233,7 +234,7 @@ def handleRevComp(d, basePath):
     return rv
 
 
-def parseSampleSheet(ss):
+def parseSampleSheet(ss, fullSheets=False):
     """
     Return a dictionary with keys: (Barcode length 1, Barcode length 2)
 
@@ -298,14 +299,16 @@ def parseSampleSheet(ss):
                     colLabs[3] = cols.index("Sample_Project")
                 continue
 
-    return reformatSS(handleRevComp(rv, os.path.dirname(ss)))
+    if fullSheets:
+        return reformatSS(handleRevComp(rv, os.path.dirname(ss)))
+    else:
+        return reformatSS(rv)
 
 
-def getSampleSheets(d):
+def getSampleSheets(d, fullSheets=False):
     """
     Provide a list of output directories and sample sheets
     """
-    print("processing {}".format(d))
     ss = glob.glob("%s/SampleSheet*.csv" % d)
 
     if len(ss) == 0:
@@ -315,8 +318,7 @@ def getSampleSheets(d):
     bcLens = []
     ssUse = []
     for sheet in ss:
-        print("Parsing {}".format(sheet))
-        ss_, laneOut_, bcLens_ = parseSampleSheet(sheet)
+        ss_, laneOut_, bcLens_ = parseSampleSheet(sheet, fullSheets=False)
         nSS = 0
         if ss_ is not None and len(ss_) > 0:
             ssUse.extend(ss_)
@@ -360,6 +362,7 @@ def newFlowCell(config) :
         if config.get("Options","runID")[:4] < "1706":
             continue
 
+        gotHits = False
         sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d))
 
         for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
@@ -378,19 +381,41 @@ def newFlowCell(config) :
                 config.set("Options","bcLen","0,0")
     
             if flowCellProcessed(config) is False:
-                syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
-                odir = "{}/{}{}".format(config.get("Paths", "outputDir"), config.get("Options", "runID"), lanesUse)
-                if not os.path.exists(odir):
-                    os.makedirs(odir)
-                if ss is not None and not os.path.exists("{}/SampleSheet.csv".format(odir)):
-                    o = open("{}/SampleSheet.csv".format(odir), "w")
-                    o.write(ss)
-                    o.close()
-                    ss = "{}/SampleSheet.csv".format(odir)
-                config.set("Options","sampleSheet",ss)
-                return config
+                gotHits = True
             else :
                 config.set("Options","runID","")
+
+        # This may seem like code duplication, but for things like a MiSeq it takes a long time to parse the BCL files. This skips that unless needed
+        if gotHits:
+            sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheet=True)
+            for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
+                config.set('Options','runID',d.split("/")[-2])
+                lanesUse = ""
+                if lane is not None and lane != "":
+                    config.set("Options","lanes",lane)
+                    lanesUse = "_lanes{}".format(lane)
+                else:
+                    config.set("Options","lanes","")
+                if ss is None:
+                    ss = ''  
+                if bcLen is not None and bcLen is not '':
+                    config.set("Options","bcLen",bcLen) 
+                else:
+                    config.set("Options","bcLen","0,0")
+   
+                if flowCellProcessed(config) is False:
+                    syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
+                    odir = "{}/{}{}".format(config.get("Paths", "outputDir"), config.get("Options", "runID"), lanesUse)
+                    if not os.path.exists(odir):
+                        os.makedirs(odir)
+                    if ss is not None and not os.path.exists("{}/SampleSheet.csv".format(odir)):
+                        o = open("{}/SampleSheet.csv".format(odir), "w")
+                        o.write(ss)
+                        o.close()
+                        ss = "{}/SampleSheet.csv".format(odir)
+                    config.set("Options","sampleSheet",ss)
+                    return config
+
     config.set("Options","runID","")
     return config
 
