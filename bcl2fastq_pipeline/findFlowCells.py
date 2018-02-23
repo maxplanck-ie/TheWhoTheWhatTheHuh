@@ -318,7 +318,7 @@ def getSampleSheets(d, fullSheets=False):
     bcLens = []
     ssUse = []
     for sheet in ss:
-        ss_, laneOut_, bcLens_ = parseSampleSheet(sheet, fullSheets=False)
+        ss_, laneOut_, bcLens_ = parseSampleSheet(sheet, fullSheets=fullSheets)
         nSS = 0
         if ss_ is not None and len(ss_) > 0:
             ssUse.extend(ss_)
@@ -387,7 +387,7 @@ def newFlowCell(config) :
 
         # This may seem like code duplication, but for things like a MiSeq it takes a long time to parse the BCL files. This skips that unless needed
         if gotHits:
-            sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheet=True)
+            sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheets=True)
             for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
                 config.set('Options','runID',d.split("/")[-2])
                 lanesUse = ""
