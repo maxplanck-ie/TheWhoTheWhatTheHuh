@@ -305,6 +305,7 @@ def getSampleSheets(d):
     """
     Provide a list of output directories and sample sheets
     """
+    print("processing {}".format(d))
     ss = glob.glob("%s/SampleSheet*.csv" % d)
 
     if len(ss) == 0:
@@ -314,6 +315,7 @@ def getSampleSheets(d):
     bcLens = []
     ssUse = []
     for sheet in ss:
+        print("Parsing {}".format(sheet))
         ss_, laneOut_, bcLens_ = parseSampleSheet(sheet)
         nSS = 0
         if ss_ is not None and len(ss_) > 0:

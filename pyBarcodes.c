@@ -245,7 +245,7 @@ int handleNextSeq(char *basePath, int nCycles, int *cycles, char ***barcodes, fl
     //Count the number of barcodes that will be output
     for(k = kh_begin(h); k != kh_end(h); k++) {
         if(kh_exist(h, k)) {
-            if(kh_value(h, k) >= 0.01 * good) nBarcodes++;
+            if(kh_value(h, k) >= THRESHOLD * good) nBarcodes++;
         }
     }
 
