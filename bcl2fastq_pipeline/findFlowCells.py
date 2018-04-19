@@ -12,6 +12,7 @@ import glob
 from email.mime.text import MIMEText
 import syslog
 import xml.etree.ElementTree as ET
+from pyBarcodes import getStats
 
 
 #Returns True on processed, False on unprocessed
@@ -35,20 +36,6 @@ def getNumLanes(d):
         return int(numLanes.get("LaneCount"))
     except:
         return 1
-
-
-# For MiSeq and HiSeq 2500/3000 runs, the i5 primer must be reverse complemented
-def mustRevComp(d):
-    FCID = d.strip("/").split("/")[-1]
-    # The type is designated by the first 1-2 letters of the machine name
-    t = FCID[7:]
-    if t.startswith("M"):
-        return True
-    elif t.startswith("SN"):
-        return True
-    elif t.startswith("J"):
-        return True
-    return False
 
 
 def revComp(s):
@@ -77,7 +64,7 @@ def formatHeaderLine(cols, colLabs, indexCols, storeLanes):
     return ",".join(l)
 
 
-def formatLine(cols, colLabs, indexCols, storeLanes, rcI5):
+def formatLine(cols, colLabs, indexCols, storeLanes):
     """Format a single line in a sample sheet"""
     l = []
     if storeLanes is True and colLabs[0] is not None:
@@ -89,10 +76,7 @@ def formatLine(cols, colLabs, indexCols, storeLanes, rcI5):
     if indexCols[0] is not None and len(cols[indexCols[0]]) > 0:
         l.append(cols[indexCols[0]])
     if indexCols[1] is not None and len(cols[indexCols[1]]) > 0:
-        if rcI5 is True:
-            l.append(revComp(cols[indexCols[1]]))
-        else:
-            l.append(cols[indexCols[1]])
+        l.append(cols[indexCols[1]])
     if colLabs[3] is not None:
         l.append(cols[colLabs[3]])
     return ",".join(l)
@@ -118,8 +102,139 @@ def reformatSS(rv):
         laneOut = None
     return ss, laneOut, bcLens
 
-        
-def parseSampleSheet(ss):
+
+def getReadLengths(basePath):
+    """
+    Parse RunInfo.xml to get the read lengths
+    Return them as a list
+    """
+    tree = ET.parse("{}/RunInfo.xml".format(basePath))
+    root = tree.getroot()[0]
+    offsets = [1]
+    for node in root.iter("Read"):
+        offsets.append(int(node.get("NumCycles")) + offsets[-1])
+    return offsets[1:]
+
+
+def handleRevComp(d, basePath):
+    """
+    Input is a dictionary with masks as keys and values as lists with 3 items: output sample sheet(s) (list of lines), lane(s) (set), barcode lengths (string)
+
+    If there's no barcode 2, simply return the lists as is. Otherwise, see if the barcodes match better what the sequencer saw or the rev. comp.
+    In the latter case, rev. comp. and then return.
+    """
+    # Empty sample sheet
+    if not d or not len(d):
+        return d
+
+    # No second barcode
+    tot = 0
+    for v in d.keys():  # A list of barcode lengths, e.g., ['6,0', '8,8']
+        tot += int(v.split(",")[1])
+    if tot == 0:
+        return d
+
+    # Get the flow cell type
+    machine = os.path.split(basePath.rstrip("/"))[1].split("_")[1]
+    if machine[0] == 'N':
+        runType = "NextSeq"
+    elif machine[0] == 'M':
+        runType = "MiSeq"
+    elif machine[0] == 'S':
+        runType = "HiSeq2500"
+    else:
+        runType = "HiSeq3000"
+
+    # At least 1 lane has a barcode 2
+    readOffsets = getReadLengths(basePath)
+    sampleSheets = []
+    lanes = []
+    masks = []
+    vals = list(d.values())
+    for i in range(len(vals)):  # Iterate over each mask possibility
+        ss = vals[i][0][2:]  # The header is stripped
+        localLanes = vals[i][1]  # This is actually a set
+        mask = vals[i][2]
+        if int(mask.split(",")[1]) == 0:  #Skip, no second barcode
+            sampleSheets.append(vals[i][0])
+            lanes.append(localLanes)
+            masks.append(mask)
+            continue
+
+        hasLane = True
+        if localLanes == '' or len(localLanes) == 0:
+            hasLane = False
+            lane = 1
+            localLanes = [1]
+        else:
+            localLanes = sorted(list(localLanes))
+
+        # Make a dictionary with key the lane and values the entries (as lists of lists)
+        d2 = dict()
+        for line in ss:
+            if hasLane:
+                lane = int(line[0])
+            if lane not in d2:
+                d2[lane] = list()
+            d2[lane].append(line)
+
+        # for each lane, get the observed barcode frequency
+        cycles = list(range(readOffsets[0], readOffsets[0] + int(mask.split(",")[0])))
+        cycles.extend(list(range(readOffsets[1], readOffsets[1] + int(mask.split(",")[1]))))
+        finalSS = []
+        outputLanes = set()
+        for lane in localLanes:
+            barcodes = getStats(basePath, runType, cycles, lane)
+
+            totF = 0.0
+            totR = 0.0
+            # See what the total is if we used the barcodes as given
+            for line in d2[lane]:
+                line = line.split(",")
+                # The .strip() stuff is due to one flow cell having extra spaces in it.
+                if hasLane:
+                    bcF = "{}{}".format(line[3].strip(), line[4].strip())
+                    bcR = "{}{}".format(line[3].strip(), revComp(line[4].strip()))
+                else:
+                    bcF = "{}{}".format(line[2].strip(), line[3].strip())
+                    bcR = "{}{}".format(line[2].strip(), revComp(line[3].strip()))
+                if bcF in barcodes:
+                    totF += barcodes[bcF]
+                if bcR in barcodes:
+                    totR += barcodes[bcR]
+            if totR > totF:
+                for idx in range(len(d2[lane])):
+                    cols = d2[lane][idx].split(",")
+                    if hasLane:
+                        cols[4] = revComp(cols[4])
+                    else:
+                        cols[3] = revComp(cols[3])
+                    d2[lane][idx] = ",".join(cols)
+            if hasLane:
+                outputLanes.add(lane)
+            finalSS.extend(d2[lane])
+
+        # Add the header lines to finalSS and then make it a big string
+        if hasLane:
+            lanes.append(localLanes)
+        masks.append(mask)
+        finalSS.insert(0, "[Data]")
+        if hasLane:
+            finalSS.insert(1, "Lane,Sample_ID,Sample_Name,index,index2,Sample_Project")
+        else:
+            finalSS.insert(1, "Sample_ID,Sample_Name,index,index2,Sample_Project")
+        sampleSheets.append(finalSS)
+
+    rv = dict()
+    for i in range(len(masks)):
+        if hasLane:
+            rv[masks[i]] = [sampleSheets[i], lanes[i], masks[i]]
+        else:
+            rv[masks[i]] = [sampleSheets[i], set(), masks[i]]
+    return rv
+
+
+def parseSampleSheet(ss, fullSheets=False):
     """
     Return a dictionary with keys: (Barcode length 1, Barcode length 2)
 
@@ -132,9 +247,6 @@ def parseSampleSheet(ss):
     if getNumLanes(os.path.dirname(ss)) < 8:
         storeLanes = False
 
-    # For NextSeq/MiSeq, reverse complement I5 sequences
-    rcI5 = mustRevComp(os.path.dirname(ss))
-    
     f = open(ss)
     inData = False
     lastLine = None
@@ -164,7 +276,7 @@ def parseSampleSheet(ss):
                 if colLabs[0] is not None and storeLanes is True:
                     rv[bcLen][1].add(int(cols[colLabs[0]]))
 
-                rv[bcLen][0].append(formatLine(cols, colLabs, indexCols, storeLanes, rcI5))
+                rv[bcLen][0].append(formatLine(cols, colLabs, indexCols, storeLanes))
 
             # Set columns for barcodes, etc.
             if lastLine is None:
@@ -187,10 +299,13 @@ def parseSampleSheet(ss):
                     colLabs[3] = cols.index("Sample_Project")
                 continue
 
-    return reformatSS(rv)
+    if fullSheets:
+        return reformatSS(handleRevComp(rv, os.path.dirname(ss)))
+    else:
+        return reformatSS(rv)
 
 
-def getSampleSheets(d):
+def getSampleSheets(d, fullSheets=False):
     """
     Provide a list of output directories and sample sheets
     """
@@ -203,7 +318,7 @@ def getSampleSheets(d):
     bcLens = []
     ssUse = []
     for sheet in ss:
-        ss_, laneOut_, bcLens_ = parseSampleSheet(sheet)
+        ss_, laneOut_, bcLens_ = parseSampleSheet(sheet, fullSheets=fullSheets)
         nSS = 0
         if ss_ is not None and len(ss_) > 0:
             ssUse.extend(ss_)
@@ -247,6 +362,7 @@ def newFlowCell(config) :
         if config.get("Options","runID")[:4] < "1706":
             continue
 
+        gotHits = False
         sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d))
 
         for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
@@ -265,19 +381,41 @@ def newFlowCell(config) :
                 config.set("Options","bcLen","0,0")
     
             if flowCellProcessed(config) is False:
-                syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
-                odir = "{}/{}{}".format(config.get("Paths", "outputDir"), config.get("Options", "runID"), lanesUse)
-                if not os.path.exists(odir):
-                    os.makedirs(odir)
-                if ss is not None and not os.path.exists("{}/SampleSheet.csv".format(odir)):
-                    o = open("{}/SampleSheet.csv".format(odir), "w")
-                    o.write(ss)
-                    o.close()
-                    ss = "{}/SampleSheet.csv".format(odir)
-                config.set("Options","sampleSheet",ss)
-                return config
+                gotHits = True
             else :
                 config.set("Options","runID","")
+
+        # This may seem like code duplication, but for things like a MiSeq it takes a long time to parse the BCL files. This skips that unless needed
+        if gotHits:
+            sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheets=True)
+            for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
+                config.set('Options','runID',d.split("/")[-2])
+                lanesUse = ""
+                if lane is not None and lane != "":
+                    config.set("Options","lanes",lane)
+                    lanesUse = "_lanes{}".format(lane)
+                else:
+                    config.set("Options","lanes","")
+                if ss is None:
+                    ss = ''  
+                if bcLen is not None and bcLen is not '':
+                    config.set("Options","bcLen",bcLen) 
+                else:
+                    config.set("Options","bcLen","0,0")
+   
+                if flowCellProcessed(config) is False:
+                    syslog.syslog("Found a new flow cell: %s\n" % config.get("Options","runID"))
+                    odir = "{}/{}{}".format(config.get("Paths", "outputDir"), config.get("Options", "runID"), lanesUse)
+                    if not os.path.exists(odir):
+                        os.makedirs(odir)
+                    if ss is not None and not os.path.exists("{}/SampleSheet.csv".format(odir)):
+                        o = open("{}/SampleSheet.csv".format(odir), "w")
+                        o.write(ss)
+                        o.close()
+                        ss = "{}/SampleSheet.csv".format(odir)
+                    config.set("Options","sampleSheet",ss)
+                    return config
+
     config.set("Options","runID","")
     return config
 
