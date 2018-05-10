@@ -577,8 +577,9 @@ def jsonParkour(config, msg):
                 read2q30 = cols2[1][:-1]
             # if there's only one sample, there will be no undetermined indices
             if lane not in laneDict:
+                readsPF = cols[1].split(0)
                 laneDict[lane] = {'undetermined_indices': 0.0,
-                                  'reads_pf': clusterPF}
+                                  'reads_pf': readsPF}
             laneDict[lane]["read_1"] = read1q30
             laneDict[lane]["read_2"] = read2q30
             laneDict[lane]["cluster_pf"] = clusterPF
