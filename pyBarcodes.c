@@ -408,10 +408,12 @@ static PyObject *pyGetStats(PyObject *self, PyObject *args) {
     else if(strcmp(runType, "HiSeq2500") == 0 || \
             strcmp(runType, "HiSeq2000") == 0) nBarcodes = handleHiSeq(basePath, lane, nCycles, 2, 16, cycles, &barcodes, &frequencies);
     else if(strcmp(runType, "MiSeq") == 0) nBarcodes = handleHiSeq(basePath, 1, nCycles, 1, 19, cycles, &barcodes, &frequencies);
+    if(nBarcodes < 0) printf("The number of barcodes is %i\n", nBarcodes);
     if(nBarcodes < 0) goto error;
 
     // Create a dictionary with barcodes as keys and frequencies as views
     rv = PyDict_New();
+    if(!rv) printf("No new dictionary\n");
     if(!rv) goto error;
     if(nBarcodes) {
         for(i=0; i<nBarcodes; i++) {

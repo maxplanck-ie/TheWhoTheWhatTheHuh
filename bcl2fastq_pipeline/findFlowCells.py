@@ -273,8 +273,11 @@ def parseSampleSheet(ss, fullSheets=False):
                     rv[bcLen] = [["[Data]", formatHeaderLine(cols, colLabs, indexCols, storeLanes)], set(), bcLen]
 
                 # Add the lane to the set, if relevant
-                if colLabs[0] is not None and storeLanes is True:
-                    rv[bcLen][1].add(int(cols[colLabs[0]]))
+                try:
+                    if colLabs[0] is not None and storeLanes is True:
+                        rv[bcLen][1].add(int(cols[colLabs[0]]))
+                except:
+                    continue
 
                 rv[bcLen][0].append(formatLine(cols, colLabs, indexCols, storeLanes))
 
