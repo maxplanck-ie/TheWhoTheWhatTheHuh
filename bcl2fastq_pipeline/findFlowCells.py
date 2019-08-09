@@ -7,9 +7,7 @@ such as marking it as having been processed and sending emails.
 
 import os
 import sys
-import smtplib
 import glob
-from email.mime.text import MIMEText
 import syslog
 import xml.etree.ElementTree as ET
 from pyBarcodes import getStats
@@ -142,6 +140,8 @@ def handleRevComp(d, basePath):
         runType = "MiSeq"
     elif machine[0] == 'S':
         runType = "HiSeq2500"
+    elif machine[0] == 'A':
+        runType = "NovaSeq"
     else:
         runType = "HiSeq3000"
 
@@ -390,7 +390,11 @@ def newFlowCell(config) :
 
         # This may seem like code duplication, but for things like a MiSeq it takes a long time to parse the BCL files. This skips that unless needed
         if gotHits:
-            sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheets=True)
+            try:
+                sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheets=True)
+            except:
+                print("Skipping {}".format(os.path.dirname(d)))
+                continue   
             for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
                 config.set('Options','runID',d.split("/")[-2])
                 lanesUse = ""
