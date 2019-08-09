@@ -376,8 +376,9 @@ static PyObject *pyGetStats(PyObject *self, PyObject *args) {
     if(strcmp(runType, "NextSeq") != 0 && \
        strcmp(runType, "HiSeq2500") != 0 && \
        strcmp(runType, "HiSeq3000") != 0 && \
+       strcmp(runType, "NovaSeq") != 0 && \
        strcmp(runType, "MiSeq") != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "The run type must be one of NextSeq, HiSeq2500, HiSeq3000, or MiSeq");
+        PyErr_SetString(PyExc_RuntimeError, "The run type must be one of NextSeq, HiSeq2500, HiSeq3000, NovaSeq or MiSeq");
         return NULL;
     }
 
@@ -404,6 +405,7 @@ static PyObject *pyGetStats(PyObject *self, PyObject *args) {
     if(strcmp(runType, "NextSeq") == 0) nBarcodes = handleNextSeq(basePath, nCycles, cycles, &barcodes, &frequencies);
     else if(strcmp(runType, "HiSeq3000") == 0 || \
             strcmp(runType, "HiSeq4000") == 0 || \
+            strcmp(runType, "NovaSeq") == 0 || \
             strcmp(runType, "HiSeqX") == 0) nBarcodes = handleHiSeq(basePath, lane, nCycles, 2, 28, cycles, &barcodes, &frequencies);
     else if(strcmp(runType, "HiSeq2500") == 0 || \
             strcmp(runType, "HiSeq2000") == 0) nBarcodes = handleHiSeq(basePath, lane, nCycles, 2, 16, cycles, &barcodes, &frequencies);
