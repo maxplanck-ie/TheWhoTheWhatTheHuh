@@ -184,24 +184,29 @@ def handleRevComp(d, basePath):
         finalSS = []
         outputLanes = set()
         for lane in localLanes:
-            barcodes = getStats(basePath, runType, cycles, lane)
+            # FIXME
+            if runType == "NovaSeq":
+                totR = 1
+                totF = 0
+            else:
+                barcodes = getStats(basePath, runType, cycles, lane)
 
-            totF = 0.0
-            totR = 0.0
-            # See what the total is if we used the barcodes as given
-            for line in d2[lane]:
-                line = line.split(",")
-                # The .strip() stuff is due to one flow cell having extra spaces in it.
-                if hasLane:
-                    bcF = "{}{}".format(line[3].strip(), line[4].strip())
-                    bcR = "{}{}".format(line[3].strip(), revComp(line[4].strip()))
-                else:
-                    bcF = "{}{}".format(line[2].strip(), line[3].strip())
-                    bcR = "{}{}".format(line[2].strip(), revComp(line[3].strip()))
-                if bcF in barcodes:
-                    totF += barcodes[bcF]
-                if bcR in barcodes:
-                    totR += barcodes[bcR]
+                totF = 0.0
+                totR = 0.0
+                # See what the total is if we used the barcodes as given
+                for line in d2[lane]:
+                    line = line.split(",")
+                    # The .strip() stuff is due to one flow cell having extra spaces in it.
+                    if hasLane:
+                        bcF = "{}{}".format(line[3].strip(), line[4].strip())
+                        bcR = "{}{}".format(line[3].strip(), revComp(line[4].strip()))
+                    else:
+                        bcF = "{}{}".format(line[2].strip(), line[3].strip())
+                        bcR = "{}{}".format(line[2].strip(), revComp(line[3].strip()))
+                    if bcF in barcodes:
+                        totF += barcodes[bcF]
+                    if bcR in barcodes:
+                        totR += barcodes[bcR]
             if totR > totF:
                 for idx in range(len(d2[lane])):
                     cols = d2[lane][idx].split(",")
@@ -244,8 +249,13 @@ def parseSampleSheet(ss, fullSheets=False):
 
     # If this is a NextSeq or a HiSeq 2500 rapid run, then don't store the incorrect Lane column
     storeLanes = True
-    if getNumLanes(os.path.dirname(ss)) < 8:
-        storeLanes = False
+    # DEBUG
+    if ss.split("/")[3][7] != "A":
+        if getNumLanes(os.path.dirname(ss)) < 8:
+            storeLanes = False
+    else:
+        if getNumLanes(os.path.dirname(ss)) < 2:
+            storeLanes = False
 
     f = open(ss)
     inData = False
@@ -263,10 +273,13 @@ def parseSampleSheet(ss, fullSheets=False):
             if lastLine is True:
                 if indexCols[0] is not None:
                     bcLen = "{}".format(len(cols[indexCols[0]]))
-                    if indexCols[1] is not None:
+                    if indexCols[1] is not None and len(cols[indexCols[1]]) > 0:
                         bcLen = "{},{}".format(bcLen, len(cols[indexCols[1]]))
+                        bcLen = "8,8"
                     else:
                         bcLen += ",0"
+                        bcLen = "8,0"
+                print("indexCols {} {} bcLen {}".format(cols[indexCols[0]], cols[indexCols[1]], bcLen))
 
                 # Append to rv, with header
                 if bcLen not in rv:
@@ -356,13 +369,15 @@ def newFlowCell(config) :
     dirs.extend(glob.glob("%s/*_NB*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
     dirs.extend(glob.glob("%s/*_M*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
     dirs.extend(glob.glob("%s/*_J*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
+    dirs.extend(glob.glob("%s/*_A*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
     for d in dirs :
         #Get the flow cell ID (e.g., 150416_SN7001180_0196_BC605HACXX)
         config.set('Options','runID',d.split("/")[-2])
 
         # Before 1703 only a single sample sheet was supported
         # Before 1706, parkour wasn't being used, so barcode revComp might be wrong
-        if config.get("Options","runID")[:4] < "1706":
+        # 190813 marked the beginning of NovaSeq hacks
+        if config.get("Options","runID")[:6] < "190813":
             continue
 
         gotHits = False
