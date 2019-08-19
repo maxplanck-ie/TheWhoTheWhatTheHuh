@@ -51,13 +51,11 @@ def determineMask(config):
                 nc = int(read.get("NumCycles"))
                 if nc > bcLens[bcNum]:
                     if bcLens[bcNum] > 0:
-                        #l.append("I{}{}".format(bcLens[bcNum], "n" * (nc - bcLens[bcNum])))
-                        l.append("I*")
+                        l.append("I{}{}".format(bcLens[bcNum], "n" * (nc - bcLens[bcNum])))
                     else:
                         l.append("{}".format("n" * nc))
                 else:
-                    #l.append("I{}".format(bcLens[bcNum]))
-                    l.append("I*")
+                    l.append("I{}".format(bcLens[bcNum]))
                 bcNum += 1
         if len(l) > 0:
             return "--use-bases-mask {} {}".format(",".join(l), lanes)

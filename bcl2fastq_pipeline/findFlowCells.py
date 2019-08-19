@@ -275,11 +275,8 @@ def parseSampleSheet(ss, fullSheets=False):
                     bcLen = "{}".format(len(cols[indexCols[0]]))
                     if indexCols[1] is not None and len(cols[indexCols[1]]) > 0:
                         bcLen = "{},{}".format(bcLen, len(cols[indexCols[1]]))
-                        bcLen = "8,8"
                     else:
                         bcLen += ",0"
-                        bcLen = "8,0"
-                print("indexCols {} {} bcLen {}".format(cols[indexCols[0]], cols[indexCols[1]], bcLen))
 
                 # Append to rv, with header
                 if bcLen not in rv:
