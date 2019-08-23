@@ -184,29 +184,25 @@ def handleRevComp(d, basePath):
         finalSS = []
         outputLanes = set()
         for lane in localLanes:
-            # FIXME
-            if runType == "NovaSeq":
-                totR = 1
-                totF = 0
-            else:
-                barcodes = getStats(basePath, runType, cycles, lane)
+            barcodes = getStats(basePath, runType, cycles, lane)
 
-                totF = 0.0
-                totR = 0.0
-                # See what the total is if we used the barcodes as given
-                for line in d2[lane]:
-                    line = line.split(",")
-                    # The .strip() stuff is due to one flow cell having extra spaces in it.
-                    if hasLane:
-                        bcF = "{}{}".format(line[3].strip(), line[4].strip())
-                        bcR = "{}{}".format(line[3].strip(), revComp(line[4].strip()))
-                    else:
-                        bcF = "{}{}".format(line[2].strip(), line[3].strip())
-                        bcR = "{}{}".format(line[2].strip(), revComp(line[3].strip()))
-                    if bcF in barcodes:
-                        totF += barcodes[bcF]
-                    if bcR in barcodes:
-                        totR += barcodes[bcR]
+            totF = 0.0
+            totR = 0.0
+            # See what the total is if we used the barcodes as given
+            for line in d2[lane]:
+                line = line.split(",")
+                # The .strip() stuff is due to one flow cell having extra spaces in it.
+                if hasLane:
+                    bcF = "{}{}".format(line[3].strip(), line[4].strip())
+                    bcR = "{}{}".format(line[3].strip(), revComp(line[4].strip()))
+                else:
+                    bcF = "{}{}".format(line[2].strip(), line[3].strip())
+                    bcR = "{}{}".format(line[2].strip(), revComp(line[3].strip()))
+                if bcF in barcodes:
+                    totF += barcodes[bcF]
+                if bcR in barcodes:
+                    totR += barcodes[bcR]
+
             if totR > totF:
                 for idx in range(len(d2[lane])):
                     cols = d2[lane][idx].split(",")

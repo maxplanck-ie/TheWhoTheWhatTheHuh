@@ -19,7 +19,7 @@ struct CBCL {
     uint64_t *offsets;
 };
 
-#define pyBarcodesVersion "0.1.0"
+#define pyBarcodesVersion "0.2.0"
 
 static PyObject *pyGetStats(PyObject *self, PyObject *args);
 
@@ -223,7 +223,7 @@ int initCBCL(CBCL *cbcl, uint32_t nTiles) {
     if(!cbcl->uncompressedSize) return 1;
     cbcl->compressedSize = calloc(nTiles, sizeof(uint32_t));
     if(!cbcl->compressedSize) return 1;
-    cbcl->offsets = calloc(nTiles, sizeof(uint32_t));
+    cbcl->offsets = calloc(nTiles, sizeof(uint64_t));
     if(!cbcl->offsets) return 1;
     return 0;
 }
@@ -264,8 +264,10 @@ CBCL* loadCBCL(FILE *bcl) {
     if(initCBCL(cbcl, nTiles)) goto error;
     
     blockOffset = (uint64_t) ftell(bcl);
-    blockOffset += 48 * nTiles;  // Start just after the per-tile information
+    blockOffset += 16 * nTiles + 1;  // Start just after the per-tile information
     for(i=0; i<nTiles; i++) {
+        // Tile number
+        if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
         // nClusters
         if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
         cbcl->nClusters[i] = headerSize;
@@ -276,7 +278,7 @@ CBCL* loadCBCL(FILE *bcl) {
         if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
         cbcl->compressedSize[i] = headerSize;
         cbcl->offsets[i] = blockOffset;
-        blockOffset += headerSize + 1;  // There is a 1 byte "failed clusters excluded" flag per-tile, skip it!
+        blockOffset += headerSize;
     }
 
     return cbcl;
@@ -341,13 +343,12 @@ char getCBCLBase(uint8_t *uncompressedTiles, uint32_t cluster) {
             return 'A';
         case 1:
             return 'C';
-        case 2:
-            return 'G';
         case 3:
             return 'T';
+        case 2:
+        default:
+            return 'G';
     }
-    // Just to make the compiler happy
-    return 'G';
 }
 
 //TODO handle a return value of 0
@@ -365,7 +366,6 @@ uint32_t cbclTile(uint8_t **uncompressedTiles, int nCycles, uint32_t nClusters, 
         for(cycle=0; cycle<nCycles; cycle++) {
            seq[cycle] = getCBCLBase(uncompressedTiles[cycle], cluster);
         }
-fprintf(stderr, "%s\n", seq);
 
         //increment the counter
         k = kh_get(32, h, seq);
@@ -392,38 +392,48 @@ error:
 // This will load nCycles of data into memory for one tile!
 int getCBCLSequence(CBCL** CBCLs, FILE **bcls, int tile, khash_t(32) *h, int nCycles) {
     int rv = 0, i;
-    uint8_t *source = NULL;
     uint8_t **uncompressedTiles = NULL;
-fprintf(stderr, "0\n");
+    uint8_t *compressedTile = NULL;
+    uLongf destLen;
+    uLong sourceLen;
+    z_stream zs = {
+        .zalloc = NULL,
+        .zfree = NULL,
+        .msg = NULL
+    };
 
     uncompressedTiles = (uint8_t**) calloc(nCycles, sizeof(uint8_t*));
     if(!uncompressedTiles) goto error;
-fprintf(stderr, "1 %i %i\n", tile, nCycles);
 
     for(i=0; i<nCycles; i++) {
-        // Seek to the appropriate tile offset
-fprintf(stderr, "seeking to %"PRIu32"\n", CBCLs[i]->offsets[tile]);
-        if(fseek(bcls[i], CBCLs[i]->offsets[tile], SEEK_SET)) goto error; // This is pointed to the 
-fprintf(stderr, "2 %"PRIu32"\n", CBCLs[i]->compressedSize[tile]);
+        destLen = CBCLs[i]->uncompressedSize[tile];
+        sourceLen = CBCLs[i]->compressedSize[tile];
 
-        source = malloc(CBCLs[i]->compressedSize[tile]);
-fprintf(stderr, "foo\n");
-        if(!source) goto error;
-fprintf(stderr, "3 %p\n", source); fflush(stderr);
-        uncompressedTiles[i] = malloc(CBCLs[i]->uncompressedSize[tile]);
+        uncompressedTiles[i] = malloc(destLen);
         if(!uncompressedTiles[i]) goto error;
-fprintf(stderr, "4\n");
 
-        if(fread((void*) source, CBCLs[i]->compressedSize[tile], 1, bcls[i]) != 1) goto error;
-fprintf(stderr, "5\n");
-        if(uncompress((Bytef *) uncompressedTiles[i], (uLongf*) (CBCLs[i]->uncompressedSize + tile), source, (uLong) CBCLs[i]->compressedSize[tile]) != Z_OK) goto error;
-fprintf(stderr, "6\n");
-        free(source);
-        source = NULL;
+        compressedTile = malloc(sourceLen);
+        if(!compressedTile) goto error;
+
+        fseek(bcls[i], CBCLs[i]->offsets[tile], SEEK_SET);
+        fread(compressedTile, sourceLen, 1,  bcls[i]);
+
+        // Skip the 10 byte header
+        zs.next_in = compressedTile + 10;
+        zs.avail_in = sourceLen - 10;
+        zs.next_out = uncompressedTiles[i];
+        zs.avail_out = destLen;
+
+        rv = inflateInit2(&zs, -15);
+        rv = inflate(&zs, Z_FINISH);
+        inflateEnd(&zs);
+        free(compressedTile);
+        compressedTile = NULL;
+        if(rv != Z_STREAM_END) goto error;
+        if(destLen != zs.total_out) goto error;
     }
 
-fprintf(stderr, "8\n");
-    rv += (int) cbclTile(uncompressedTiles, nCycles, CBCLs[i]->nClusters, h);
+    rv += (int) cbclTile(uncompressedTiles, nCycles, CBCLs[0]->nClusters[0], h);
 
     for(i=0; i<nCycles; i++) free(uncompressedTiles[i]);
     free(uncompressedTiles);
@@ -431,11 +441,12 @@ fprintf(stderr, "8\n");
     return rv;
 
 error:
-    if(source) free(source);
+    if(compressedTile) free(compressedTile);
     if(uncompressedTiles) {
         for(i=0; i<nCycles; i++) {
             if(uncompressedTiles[i]) free(uncompressedTiles[i]);
         }
+        free(uncompressedTiles);
     }
 
     //TODO return -1 on error and handle that
@@ -459,12 +470,12 @@ int CBCLProcess(FILE **bcls, khash_t(32) *h, int nCycles) {
 
     //Send each tile into getCBCLSequence
     for(i=0; i<CBCLs[0]->nTiles; i++) {
-fprintf(stderr, "D %i\n", i);
         good += getCBCLSequence(CBCLs, bcls, i, h, nCycles);
-fprintf(stderr, "E %i\n", i);
         if(good > MINCLUSTERS) break;
     }
-fprintf(stderr, "F\n");
+
+    for(i=0; i<nCycles; i++) destroyCBCL(CBCLs[i]);
+    free(CBCLs);
 
     return good;
 
@@ -612,11 +623,10 @@ error:
 // Returns the number of values in *barcodes and *frequencies, which must both be free()d
 // Unlike the other functions, this doesn't care about tiles since they're concatenated.
 // Only a single side of each lane is used.
-int handleNovaSeq(char *basePath, int lane, int nCycles, int maxSwath, int maxTile, int *cycles, char ***barcodes, float **frequencies) {
+int handleNovaSeq(char *basePath, int lane, int nCycles, int *cycles, char ***barcodes, float **frequencies) {
     FILE **cbcls = NULL;
-    char *seq;
-    uint32_t i, good = 0;
-    int rv, nBarcodes = 0;
+    uint32_t i;
+    int rv, good, nBarcodes = 0;
     khiter_t k;
 
     //This hash will get reused until we've processed up to a million clusters
@@ -625,8 +635,8 @@ int handleNovaSeq(char *basePath, int lane, int nCycles, int maxSwath, int maxTi
     cbcls = openNovaSeq(basePath, lane, cycles, nCycles);
     if(!cbcls) goto error;
 
-    rv = CBCLProcess(cbcls, h, nCycles);
-    if(rv == -1) goto error;
+    good = CBCLProcess(cbcls, h, nCycles);
+    if(good == -1) goto error;
 
     closeCBCLs(cbcls, nCycles);
     cbcls = NULL;
@@ -634,7 +644,7 @@ int handleNovaSeq(char *basePath, int lane, int nCycles, int maxSwath, int maxTi
     //Count the number of barcodes that will be output
     for(k = kh_begin(h); k != kh_end(h); k++) {
         if(kh_exist(h, k)) {
-            if(kh_value(h, k) >= THRESHOLD * rv) nBarcodes++;
+            if(kh_value(h, k) >= THRESHOLD * good) nBarcodes++;
         }
     }
 
@@ -644,7 +654,7 @@ int handleNovaSeq(char *basePath, int lane, int nCycles, int maxSwath, int maxTi
     if(!*frequencies) goto error;
     for(k = kh_begin(h), i = 0; k != kh_end(h); k++) {
         if(kh_exist(h, k)) {
-            if(kh_value(h, k) >= THRESHOLD * rv) {
+            if(kh_value(h, k) >= THRESHOLD * good) {
                 (*frequencies)[i] = (100. * kh_value(h, k)) / good;
                 (*barcodes)[i++] = (char *) kh_key(h, k);
             } else {
@@ -654,8 +664,6 @@ int handleNovaSeq(char *basePath, int lane, int nCycles, int maxSwath, int maxTi
     }
 
     kh_destroy(32, h);
-    free(seq);
-goto error;
 
     return nBarcodes;
 
@@ -714,7 +722,7 @@ static PyObject *pyGetStats(PyObject *self, PyObject *args) {
     }
 
     if(strcmp(runType, "NextSeq") == 0) nBarcodes = handleNextSeq(basePath, nCycles, cycles, &barcodes, &frequencies);
-    else if(strcmp(runType, "NovaSeq") == 0) nBarcodes = handleNovaSeq(basePath, lane, nCycles, 2, 28, cycles, &barcodes, &frequencies);
+    else if(strcmp(runType, "NovaSeq") == 0) nBarcodes = handleNovaSeq(basePath, lane, nCycles, cycles, &barcodes, &frequencies);
     else if(strcmp(runType, "HiSeq3000") == 0 || \
             strcmp(runType, "HiSeq4000") == 0 || \
             strcmp(runType, "HiSeqX") == 0) nBarcodes = handleHiSeq(basePath, lane, nCycles, 2, 28, cycles, &barcodes, &frequencies);
