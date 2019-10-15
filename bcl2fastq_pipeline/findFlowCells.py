@@ -36,6 +36,26 @@ def getNumLanes(d):
         return 1
 
 
+def getNumLanesNovaSeq(d):
+    """
+    This returns the number of loadable lanes. If the sample sheet has a single lane then 1 is returned.
+    """
+    try:
+        ss = open(os.path.join(d, "SampleSheet.csv")).read()
+        ss = ss.strip().split("\n")
+        ss = [x.strip(",") for x in ss]
+        idx = ss.index("[Data]") + 1
+        lanes = set()
+        if not ss[idx].startsWith("Lane"):
+            return 1
+        for i in range(idx + 1, len(lanes)):
+            cols = lanes[i].split(",")
+            lanes.add(cols[0])
+        return len(lanes)
+    except:
+        return getNumLanes(d)
+
+
 def revComp(s):
     """Reverse complement a primer sequence"""
     d = {"A": "T", "C": "G", "G": "C", "T": "A", "N": "N"}
@@ -250,7 +270,7 @@ def parseSampleSheet(ss, fullSheets=False):
         if getNumLanes(os.path.dirname(ss)) < 8:
             storeLanes = False
     else:
-        if getNumLanes(os.path.dirname(ss)) < 2:
+        if getNumLanesNovaSeq(os.path.dirname(ss)) < 2:
             storeLanes = False
 
     f = open(ss)

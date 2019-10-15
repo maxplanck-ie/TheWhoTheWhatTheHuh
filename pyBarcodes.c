@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <zlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "khash.h"
 #define MINCLUSTERS 1000000
 #define THRESHOLD 0.005
@@ -125,6 +126,7 @@ FILE **openNovaSeq(char *basePath, int lane, int *cycles, int nCycles) {
 
     for(i=0; i<nCycles; i++) {
         sprintf(fname, "%s/Data/Intensities/BaseCalls/L00%i/C%i.1/L00%i_1.cbcl", basePath, lane, cycles[i], lane);
+        if(access(fname, F_OK) != 0) sprintf(fname, "%s/Data/Intensities/BaseCalls/L00%i/C%i.1/L00%i_2.cbcl", basePath, lane, cycles[i], lane);
         o[i] = fopen(fname, "r");
         if(!o[i] != Z_NULL) goto error;
     }
