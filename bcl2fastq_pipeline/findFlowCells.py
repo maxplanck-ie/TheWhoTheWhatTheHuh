@@ -46,7 +46,7 @@ def getNumLanesNovaSeq(d):
         ss = [x.strip(",") for x in ss]
         idx = ss.index("[Data]") + 1
         lanes = set()
-        if not ss[idx].startsWith("Lane"):
+        if not ss[idx].startswith("Lane"):
             return 1
         for i in range(idx + 1, len(lanes)):
             cols = lanes[i].split(",")
