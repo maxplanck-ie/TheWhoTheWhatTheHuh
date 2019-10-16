@@ -48,8 +48,8 @@ def getNumLanesNovaSeq(d):
         lanes = set()
         if not ss[idx].startswith("Lane"):
             return 1
-        for i in range(idx + 1, len(lanes)):
-            cols = lanes[i].split(",")
+        for i in range(idx + 1, len(ss)):
+            cols = ss[i].split(",")
             lanes.add(cols[0])
         return len(lanes)
     except:
