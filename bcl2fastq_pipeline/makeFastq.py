@@ -108,6 +108,8 @@ def rewriteSampleSheet(config) :
                 line = line.replace("ß", "sz")
                 #& to _and_
                 line = line.replace("&", "_and_")
+                #% to _percent_
+                line = line.replace("%%", "_percent_")
                 #' to nothing
                 line = line.replace("'", "")
             else :
