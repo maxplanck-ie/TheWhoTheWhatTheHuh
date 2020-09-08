@@ -5,12 +5,22 @@
 #include <inttypes.h>
 #include <zlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "khash.h"
 #define MINCLUSTERS 1000000
 #define THRESHOLD 0.005
 KHASH_MAP_INIT_STR(32, uint32_t)
 
-#define pyBarcodesVersion "0.1.0"
+typedef struct CBCL CBCL;
+struct CBCL {
+    uint32_t nTiles;
+    uint32_t *nClusters;
+    uint32_t *uncompressedSize;
+    uint32_t *compressedSize;
+    uint64_t *offsets;
+};
+
+#define pyBarcodesVersion "0.2.0"
 
 static PyObject *pyGetStats(PyObject *self, PyObject *args);
 
@@ -106,6 +116,29 @@ error:
     return NULL;
 }
 
+// NovaSeq 6000
+FILE **openNovaSeq(char *basePath, int lane, int *cycles, int nCycles) {
+    int i;
+    char fname[16384];
+    FILE **o = NULL;
+    o = calloc(nCycles, sizeof(FILE*));  // Use only 1 surface
+    if(!o) return NULL;
+
+    for(i=0; i<nCycles; i++) {
+        sprintf(fname, "%s/Data/Intensities/BaseCalls/L00%i/C%i.1/L00%i_1.cbcl", basePath, lane, cycles[i], lane);
+        if(access(fname, F_OK) != 0) sprintf(fname, "%s/Data/Intensities/BaseCalls/L00%i/C%i.1/L00%i_2.cbcl", basePath, lane, cycles[i], lane);
+        o[i] = fopen(fname, "r");
+        if(!o[i] != Z_NULL) goto error;
+    }
+
+    return o;
+
+error:
+    for(i=0; i<=nCycles; i++) if(o[i] != NULL) fclose(o[i]);
+    free(o);
+    return NULL;
+}
+
 //MiSeq runs are the same as HiSeq, except the bcl files aren't compressed
 gzFile *openMiSeq(char *basePath, int tile, int *cycles, int nCycles) {
     int i;
@@ -147,6 +180,12 @@ void closeBCLs(gzFile *bcls, int nBCLs) {
     free(bcls);
 }
 
+void closeCBCLs(FILE **cbcls, int nBCLs) {
+    int i;
+    for(i=0; i<nBCLs; i++) fclose(cbcls[i]);
+    free(cbcls);
+}
+
 //Returns 1 on error, 0 on success
 int getSequence(uint32_t cluster, gzFile *bcls, uint32_t nBCLs, char *seq) {
     uint8_t byte;
@@ -176,6 +215,79 @@ int getSequence(uint32_t cluster, gzFile *bcls, uint32_t nBCLs, char *seq) {
     }
 
     return 0;
+}
+
+//returns 1 on error, 0 on success
+int initCBCL(CBCL *cbcl, uint32_t nTiles) {
+    cbcl->nClusters = calloc(nTiles, sizeof(uint32_t));
+    if(!cbcl->nClusters) return 1;
+    cbcl->uncompressedSize = calloc(nTiles, sizeof(uint32_t));
+    if(!cbcl->uncompressedSize) return 1;
+    cbcl->compressedSize = calloc(nTiles, sizeof(uint32_t));
+    if(!cbcl->compressedSize) return 1;
+    cbcl->offsets = calloc(nTiles, sizeof(uint64_t));
+    if(!cbcl->offsets) return 1;
+    return 0;
+}
+
+//destroy a CBCL object
+void destroyCBCL(CBCL *cbcl) {
+    if(cbcl->nTiles) {
+        if(cbcl->nClusters) free(cbcl->nClusters);
+        if(cbcl->uncompressedSize) free(cbcl->uncompressedSize);
+        if(cbcl->compressedSize) free(cbcl->compressedSize);
+        if(cbcl->offsets) free(cbcl->offsets);
+    }
+    free(cbcl);
+}
+
+//Returns a NULL pointe on error
+CBCL* loadCBCL(FILE *bcl) {
+    uint8_t bitsPerBase, bitsPerQScore;
+    uint16_t version;
+    uint32_t i, j;
+    uint32_t headerSize, QBins, nTiles;
+    uint64_t blockOffset;
+    CBCL *cbcl = NULL;
+    cbcl = calloc(1, sizeof(CBCL));
+    if(!cbcl) goto error;
+
+    //CBCL header
+    fseek(bcl, 0, SEEK_SET);
+    if(fread((void*) &version, 2, 1, bcl) != 1) goto error;
+    if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
+    if(fread((void*) &bitsPerBase, 1, 1, bcl) != 1) goto error;
+    if(fread((void*) &bitsPerQScore, 1, 1, bcl) != 1) goto error;
+    if(fread((void*) &QBins, 4, 1, bcl) != 1) goto error;
+    fseek(bcl, 8 * QBins, SEEK_CUR);  // Skip Q-value binning definition
+    if(fread((void*) &nTiles, 4, 1, bcl) != 1) goto error;
+
+    cbcl->nTiles = nTiles;
+    if(initCBCL(cbcl, nTiles)) goto error;
+    
+    blockOffset = (uint64_t) ftell(bcl);
+    blockOffset += 16 * nTiles + 1;  // Start just after the per-tile information
+    for(i=0; i<nTiles; i++) {
+        // Tile number
+        if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
+        // nClusters
+        if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
+        cbcl->nClusters[i] = headerSize;
+        // uncompressedSize
+        if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
+        cbcl->uncompressedSize[i] = headerSize;
+        // compressedSize
+        if(fread((void*) &headerSize, 4, 1, bcl) != 1) goto error;
+        cbcl->compressedSize[i] = headerSize;
+        cbcl->offsets[i] = blockOffset;
+        blockOffset += headerSize;
+    }
+
+    return cbcl;
+
+error:
+    if(cbcl) destroyCBCL(cbcl);
+    return NULL;
 }
 
 //Return the number of clusters passing filter (up to 1 million), -1 on error
@@ -220,6 +332,162 @@ int commonProcess(FILE *filterFile, gzFile *bcls, khash_t(32) *h, int nCycles) {
 
 error:
     if(seq) free(seq);
+    return -1;
+}
+
+char getCBCLBase(uint8_t *uncompressedTiles, uint32_t cluster) {
+    uint8_t byte = uncompressedTiles[cluster/2];
+    int offset = cluster % 2;
+
+    if(offset) byte>>=4;
+    switch(byte & 3) {
+        case 0:
+            return 'A';
+        case 1:
+            return 'C';
+        case 3:
+            return 'T';
+        case 2:
+        default:
+            return 'G';
+    }
+}
+
+//TODO handle a return value of 0
+uint32_t cbclTile(uint8_t **uncompressedTiles, int nCycles, uint32_t nClusters, khash_t(32) *h) {
+    khiter_t k;
+    char *seq = NULL;
+    int cycle, ret;
+    uint32_t cluster;
+
+    seq = malloc(nCycles + 1);
+    if(!seq) return 0;
+    seq[nCycles] = '\0';
+
+    for(cluster=0; cluster<nClusters; cluster++) {
+        for(cycle=0; cycle<nCycles; cycle++) {
+           seq[cycle] = getCBCLBase(uncompressedTiles[cycle], cluster);
+        }
+
+        //increment the counter
+        k = kh_get(32, h, seq);
+        if(k == kh_end(h)) {
+            k = kh_put(32, h, seq, &ret);
+            kh_value(h, k) = 0;
+            seq = malloc(nCycles + 1);
+            if(!seq) goto error;
+            seq[nCycles] = '\0';
+        }
+        kh_value(h, k)++;
+    }
+
+    free(seq);
+    return nClusters;
+
+error:
+    if(seq) free(seq);
+    return 0;
+}
+
+
+// Returns the number of clusters returning sequence, which is all of them
+// This will load nCycles of data into memory for one tile!
+int getCBCLSequence(CBCL** CBCLs, FILE **bcls, int tile, khash_t(32) *h, int nCycles) {
+    int rv = 0, i;
+    uint8_t **uncompressedTiles = NULL;
+    uint8_t *compressedTile = NULL;
+    uLongf destLen;
+    uLong sourceLen;
+    z_stream zs = {
+        .zalloc = NULL,
+        .zfree = NULL,
+        .msg = NULL
+    };
+
+    uncompressedTiles = (uint8_t**) calloc(nCycles, sizeof(uint8_t*));
+    if(!uncompressedTiles) goto error;
+
+    for(i=0; i<nCycles; i++) {
+        destLen = CBCLs[i]->uncompressedSize[tile];
+        sourceLen = CBCLs[i]->compressedSize[tile];
+
+        uncompressedTiles[i] = malloc(destLen);
+        if(!uncompressedTiles[i]) goto error;
+
+        compressedTile = malloc(sourceLen);
+        if(!compressedTile) goto error;
+
+        fseek(bcls[i], CBCLs[i]->offsets[tile], SEEK_SET);
+        fread(compressedTile, sourceLen, 1,  bcls[i]);
+
+        // Skip the 10 byte header
+        zs.next_in = compressedTile + 10;
+        zs.avail_in = sourceLen - 10;
+        zs.next_out = uncompressedTiles[i];
+        zs.avail_out = destLen;
+
+        rv = inflateInit2(&zs, -15);
+        rv = inflate(&zs, Z_FINISH);
+        inflateEnd(&zs);
+        free(compressedTile);
+        compressedTile = NULL;
+        if(rv != Z_STREAM_END) goto error;
+        if(destLen != zs.total_out) goto error;
+    }
+
+    rv += (int) cbclTile(uncompressedTiles, nCycles, CBCLs[0]->nClusters[0], h);
+
+    for(i=0; i<nCycles; i++) free(uncompressedTiles[i]);
+    free(uncompressedTiles);
+
+    return rv;
+
+error:
+    if(compressedTile) free(compressedTile);
+    if(uncompressedTiles) {
+        for(i=0; i<nCycles; i++) {
+            if(uncompressedTiles[i]) free(uncompressedTiles[i]);
+        }
+        free(uncompressedTiles);
+    }
+
+    //TODO return -1 on error and handle that
+    return 0;
+}
+
+//Return the number of clusters passing filter (up to 1 million), -1 on error
+// No filter files, since the cbcl files have been filtered already
+int CBCLProcess(FILE **bcls, khash_t(32) *h, int nCycles) {
+    int i, good = 0;
+    CBCL** CBCLs = NULL;
+
+    CBCLs = calloc(nCycles, sizeof(CBCL));
+    if(!CBCLs) goto error;
+
+    //Open each file, reading each into a data structure with offsets and a vector of numbers of clusters
+    for(i=0; i<nCycles; i++) {
+        CBCLs[i] = loadCBCL(bcls[i]);
+        if(!CBCLs[i]) goto error;
+    }
+
+    //Send each tile into getCBCLSequence
+    for(i=0; i<CBCLs[0]->nTiles; i++) {
+        good += getCBCLSequence(CBCLs, bcls, i, h, nCycles);
+        if(good > MINCLUSTERS) break;
+    }
+
+    for(i=0; i<nCycles; i++) destroyCBCL(CBCLs[i]);
+    free(CBCLs);
+
+    return good;
+
+error:
+    if(CBCLs) {
+        for(i=0; i<nCycles; i++) {
+            if(CBCLs[i]) destroyCBCL(CBCLs[i]);
+        }
+        free(CBCLs);
+    }
     return -1;
 }
 
@@ -354,6 +622,59 @@ error:
     return -1;
 }
 
+// Returns the number of values in *barcodes and *frequencies, which must both be free()d
+// Unlike the other functions, this doesn't care about tiles since they're concatenated.
+// Only a single side of each lane is used.
+int handleNovaSeq(char *basePath, int lane, int nCycles, int *cycles, char ***barcodes, float **frequencies) {
+    FILE **cbcls = NULL;
+    uint32_t i;
+    int rv, good, nBarcodes = 0;
+    khiter_t k;
+
+    //This hash will get reused until we've processed up to a million clusters
+    khash_t(32) *h = kh_init(32);
+
+    cbcls = openNovaSeq(basePath, lane, cycles, nCycles);
+    if(!cbcls) goto error;
+
+    good = CBCLProcess(cbcls, h, nCycles);
+    if(good == -1) goto error;
+
+    closeCBCLs(cbcls, nCycles);
+    cbcls = NULL;
+
+    //Count the number of barcodes that will be output
+    for(k = kh_begin(h); k != kh_end(h); k++) {
+        if(kh_exist(h, k)) {
+            if(kh_value(h, k) >= THRESHOLD * good) nBarcodes++;
+        }
+    }
+
+    *barcodes = malloc(nBarcodes * sizeof(char**));
+    *frequencies = malloc(nBarcodes * sizeof(float));
+    if(!*barcodes) goto error;
+    if(!*frequencies) goto error;
+    for(k = kh_begin(h), i = 0; k != kh_end(h); k++) {
+        if(kh_exist(h, k)) {
+            if(kh_value(h, k) >= THRESHOLD * good) {
+                (*frequencies)[i] = (100. * kh_value(h, k)) / good;
+                (*barcodes)[i++] = (char *) kh_key(h, k);
+            } else {
+                free((char*) kh_key(h, k));
+            }
+        }
+    }
+
+    kh_destroy(32, h);
+
+    return nBarcodes;
+
+error:
+    kh_destroy(32, h);
+    if(cbcls) closeCBCLs(cbcls, nCycles);
+    return -1;
+}
+
 /********************************************************************
  *
  * Begin python wrapping stuff
@@ -376,8 +697,9 @@ static PyObject *pyGetStats(PyObject *self, PyObject *args) {
     if(strcmp(runType, "NextSeq") != 0 && \
        strcmp(runType, "HiSeq2500") != 0 && \
        strcmp(runType, "HiSeq3000") != 0 && \
+       strcmp(runType, "NovaSeq") != 0 && \
        strcmp(runType, "MiSeq") != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "The run type must be one of NextSeq, HiSeq2500, HiSeq3000, or MiSeq");
+        PyErr_SetString(PyExc_RuntimeError, "The run type must be one of NextSeq, HiSeq2500, HiSeq3000, NovaSeq or MiSeq");
         return NULL;
     }
 
@@ -402,6 +724,7 @@ static PyObject *pyGetStats(PyObject *self, PyObject *args) {
     }
 
     if(strcmp(runType, "NextSeq") == 0) nBarcodes = handleNextSeq(basePath, nCycles, cycles, &barcodes, &frequencies);
+    else if(strcmp(runType, "NovaSeq") == 0) nBarcodes = handleNovaSeq(basePath, lane, nCycles, cycles, &barcodes, &frequencies);
     else if(strcmp(runType, "HiSeq3000") == 0 || \
             strcmp(runType, "HiSeq4000") == 0 || \
             strcmp(runType, "HiSeqX") == 0) nBarcodes = handleHiSeq(basePath, lane, nCycles, 2, 28, cycles, &barcodes, &frequencies);

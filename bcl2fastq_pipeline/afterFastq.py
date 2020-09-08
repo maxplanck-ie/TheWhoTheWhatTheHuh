@@ -184,6 +184,9 @@ def clumpify_worker(d):
     config = localConfig
     oldWd = os.getcwd()
     os.chdir(d)
+    dist = config.get("bbmap", "clumpify_HiSeq3000_dist")
+    if config.get("Options", "runID")[7] == "A":
+        dist = config.get("bbmap", "clumpify_NovaSeq_dist")
 
     read1s = glob.glob("*_R1.fastq.gz") 
     PE = 1
@@ -198,14 +201,14 @@ def clumpify_worker(d):
             cmd = "{} in={} in2={} out=temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
                                                                                     r1, r2,
                                                                                     config.get("bbmap", "clumpify_options"),
-                                                                                    config.get("bbmap", "clumpify_HiSeq3000_dist"),
+                                                                                    dist,
                                                                                     config.get("bbmap", "clumpify_threads"))
         else:
             PE = 0
             cmd = "{} in={} out=temp.fq.gz {} dupedist={} threads={}".format(config.get("bbmap", "clumpify_command"),
                                                                              r1,
                                                                              config.get("bbmap", "clumpify_options"),
-                                                                             config.get("bbmap", "clumpify_HiSeq3000_dist"),
+                                                                             dist,
                                                                              config.get("bbmap", "clumpify_threads"))
         syslog.syslog("[clumpify_worker] Processing %s\n" % cmd)
         subprocess.check_call(cmd, shell=True)
@@ -320,7 +323,7 @@ def postMakeSteps(config) :
     localConfig = config
 
     #Deduplicate if this is a HiSeq 3000 run
-    if config.get("Options", "runID")[7] == "J":
+    if config.get("Options", "runID")[7] in ["J", "A"]:
         sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         p = mp.Pool(int(config.get("Options", "deduplicateInstances")))

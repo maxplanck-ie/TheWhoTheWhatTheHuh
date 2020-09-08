@@ -108,6 +108,8 @@ def rewriteSampleSheet(config) :
                 line = line.replace("ß", "sz")
                 #& to _and_
                 line = line.replace("&", "_and_")
+                #% to _percent_
+                line = line.replace("%%", "_percent_")
                 #' to nothing
                 line = line.replace("'", "")
             else :
@@ -172,25 +174,39 @@ def bcl2fq(config) :
     mask = ""
     if(rv is not None) :
         mask = rv
-    cmd = "%s %s %s -o %s/%s%s -R %s/%s --interop-dir %s/%s%s/InterOp" % (
-        config.get("bcl2fastq","bcl2fastq"),
-        config.get("bcl2fastq","bcl2fastq_options"),
-        mask,
-        config.get("Paths","outputDir"),
-        config.get("Options","runID"),
-        lanes,
-        config.get("Paths","baseDir"),
-        config.get("Options","runID"),
-        config.get("Paths","seqFacDir"),
-        config.get("Options","runID"),
-        lanes
-    )
-    syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
-    logOut = open("%s/%s%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
-    logErr = open("%s/%s%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
-    subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
-    logOut.close()
-    logErr.close()
+    print("rv {} mask {}".format(rv, mask))
+
+    mismatch = 2
+    while mismatch >= 0:
+        cmd = "%s %s %s -o %s/%s%s -R %s/%s --interop-dir %s/%s%s/InterOp --barcode-mismatches %i" % (
+              config.get("bcl2fastq","bcl2fastq"),
+              config.get("bcl2fastq","bcl2fastq_options"),
+              mask,
+              config.get("Paths","outputDir"),
+              config.get("Options","runID"),
+              lanes,
+              config.get("Paths","baseDir"),
+              config.get("Options","runID"),
+              config.get("Paths","seqFacDir"),
+              config.get("Options","runID"),
+              lanes,
+              mismatch
+        )
+        print(cmd)
+        syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
+        logOut = open("%s/%s%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
+        logErr = open("%s/%s%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
+        try:
+            subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
+            rv = 0
+        except:
+            mismatch -= 1
+            rv = 1
+        logOut.close()
+        logErr.close()
+        if rv == 0:
+            break
+
 
 def getOffSpecies(fname) :
     total = 0

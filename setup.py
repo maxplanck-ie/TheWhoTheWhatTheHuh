@@ -19,6 +19,7 @@ additional_libs = [sysconfig.get_config_var("LIBDIR"), sysconfig.get_config_var(
 module1 = Extension('pyBarcodes',
                     sources = srcs,
                     libraries = libs,
+                    extra_compile_args = ["-Og"],
                     library_dirs = additional_libs)
 
 setup(name = 'bcl2fastq_pipeline',
