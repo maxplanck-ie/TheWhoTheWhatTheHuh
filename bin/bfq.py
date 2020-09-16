@@ -63,10 +63,11 @@ while True:
     lanes = config["Options"]["lanes"]
     if lanes != "":
         lanes = "_lanes{}".format(lanes)
+    message = ""
     if not os.path.exists("{}/{}{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes)):
         try:
             print("pre_bcl2fastq")
-            message = bcl2fastq_pipeline.makeFastq.bcl2fq(config, parkour_dict)
+            message += bcl2fastq_pipeline.makeFastq.bcl2fq(config, parkour_dict)
             print(message)
             open("{}/{}{}/bcl.done".format(config["Paths"]["outputDir"], config["Options"]["runID"], lanes), "w").close()
         except :

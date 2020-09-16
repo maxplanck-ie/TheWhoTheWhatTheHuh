@@ -23,9 +23,9 @@ module1 = Extension('pyBarcodes',
                     library_dirs = additional_libs)
 
 setup(name = 'bcl2fastq_pipeline',
-       version = '0.3.1',
+       version = '0.4.0',
        description = 'bcl2fastq_pipeline',
-       author = "Devon P. Ryan",
+       author = "Devon P. Ryan, Leily Rabbani",
        author_email = "ryan@ie-freiburg.mpg.de",
        scripts = ['bin/bfq.py', 'bin/renameProject.py'],
        packages = ['bcl2fastq_pipeline'],
