@@ -10,6 +10,7 @@ import sys
 import glob
 import syslog
 import xml.etree.ElementTree as ET
+import requests
 from pyBarcodes import getStats
 
 
@@ -164,13 +165,14 @@ def handleRevComp(d, basePath):
         runType = "NovaSeq"
     else:
         runType = "HiSeq3000"
-
+    
     # At least 1 lane has a barcode 2
     readOffsets = getReadLengths(basePath)
     sampleSheets = []
     lanes = []
     masks = []
     vals = list(d.values())
+    
     for i in range(len(vals)):  # Iterate over each mask possibility
         ss = vals[i][0][2:]  # The header is stripped
         localLanes = vals[i][1]  # This is actually a set
@@ -188,7 +190,8 @@ def handleRevComp(d, basePath):
             localLanes = [1]
         else:
             localLanes = sorted(list(localLanes))
-
+        
+        
         # Make a dictionary with key the lane and values the entries (as lists of lists)
         d2 = dict()
         for line in ss:
@@ -203,9 +206,11 @@ def handleRevComp(d, basePath):
         cycles.extend(list(range(readOffsets[1], readOffsets[1] + int(mask.split(",")[1]))))
         finalSS = []
         outputLanes = set()
+        
         for lane in localLanes:
+            
             barcodes = getStats(basePath, runType, cycles, lane)
-
+            
             totF = 0.0
             totR = 0.0
             # See what the total is if we used the barcodes as given
@@ -236,6 +241,7 @@ def handleRevComp(d, basePath):
             finalSS.extend(d2[lane])
 
         # Add the header lines to finalSS and then make it a big string
+        
         if hasLane:
             lanes.append(localLanes)
         masks.append(mask)
@@ -249,9 +255,11 @@ def handleRevComp(d, basePath):
     rv = dict()
     for i in range(len(masks)):
         if hasLane:
+            
             rv[masks[i]] = [sampleSheets[i], lanes[i], masks[i]]
         else:
             rv[masks[i]] = [sampleSheets[i], set(), masks[i]]
+    
     return rv
 
 
@@ -266,7 +274,7 @@ def parseSampleSheet(ss, fullSheets=False):
     # If this is a NextSeq or a HiSeq 2500 rapid run, then don't store the incorrect Lane column
     storeLanes = True
     # DEBUG
-    if ss.split("/")[3][7] != "A":
+    if ss.split("/")[-2][7] != "A":
         if getNumLanes(os.path.dirname(ss)) < 8:
             storeLanes = False
     else:
@@ -361,8 +369,30 @@ def getSampleSheets(d, fullSheets=False):
         elif nSS > 0:
             bcLens.extend([None] * nSS)
 
+    
     return ssUse, laneOut, bcLens
 
+
+def parse_parkour(config):
+    """
+    Look for the flowcell/lane in parkour for the library type 
+    """
+    FCID = config.get("Options", "runID").split("_")[3][1:]  # C605HACXX from 150416_SN7001180_0196_BC605HACXX
+    if '-' in FCID:
+        FCID = FCID.split('-')[-1]
+    d = {'flowcell_id': FCID}
+    res = requests.get(config.get("parkour", "QueryURL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), params=d)
+    res1 = requests.get(config.get("parkour", "Query1URL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), params={'index_type_id':'Chromium i7 Multiplex Kit Single Cell v2_v3_PN120262'})
+    print(res1)
+    if res.status_code == 200:
+        return res.json()
+    return dict()
+
+def get_libInfo(config):
+    """
+    return library info after calling parse_parkour
+    """
+    return parse_parkour(config)
 
 '''
 Iterate over all folders in config.baseDir from machine SN7001180. For each,
@@ -383,6 +413,7 @@ def newFlowCell(config) :
     dirs.extend(glob.glob("%s/*_M*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
     dirs.extend(glob.glob("%s/*_J*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
     dirs.extend(glob.glob("%s/*_A*_*/RTAComplete.txt" % config.get("Paths","baseDir")))
+    parkour_dict = dict()
     for d in dirs :
         #Get the flow cell ID (e.g., 150416_SN7001180_0196_BC605HACXX)
         config.set('Options','runID',d.split("/")[-2])
@@ -392,10 +423,10 @@ def newFlowCell(config) :
         # 190813 marked the beginning of NovaSeq hacks
         if config.get("Options","runID")[:6] < "190813":
             continue
-
+        parkour_dict = get_libInfo(config)
         gotHits = False
         sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d))
-
+        
         for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
             config.set('Options','runID',d.split("/")[-2])
             lanesUse = ""
@@ -420,10 +451,12 @@ def newFlowCell(config) :
         if gotHits:
             try:
                 sampleSheet, lanes, bcLens = getSampleSheets(os.path.dirname(d), fullSheets=True)
+                
             except:
                 print("Skipping {}".format(os.path.dirname(d)))
                 continue   
             for ss, lane, bcLen in zip(sampleSheet, lanes, bcLens):
+                
                 config.set('Options','runID',d.split("/")[-2])
                 lanesUse = ""
                 if lane is not None and lane != "":
@@ -443,7 +476,7 @@ def newFlowCell(config) :
                     odir = "{}/{}{}".format(config.get("Paths", "outputDir"), config.get("Options", "runID"), lanesUse)
                     if not os.path.exists(odir):
                         os.makedirs(odir)
-                    print("original ss {}".format(ss))
+                    
                     if ss is not None:
                         if not os.path.exists("{}/SampleSheet.csv".format(odir)):
                             o = open("{}/SampleSheet.csv".format(odir), "w")
@@ -451,10 +484,10 @@ def newFlowCell(config) :
                             o.close()
                         ss = "{}/SampleSheet.csv".format(odir)
                     config.set("Options","sampleSheet",ss)
-                    return config
+                    return config, parkour_dict
 
     config.set("Options","runID","")
-    return config
+    return config, parkour_dict
 
 
 def markFinished(config) :

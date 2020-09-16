@@ -79,7 +79,7 @@ def fastq_screen_worker(fname) :
 
     #Skip read #2
     bname = fname.split("/")[-1]
-    if(bname[-12:] == "_R2.fastq.gz") :
+    if(bname[-12:] != "_R1.fastq.gz") :
         return
 
     #If the image is already there, then skip
@@ -117,7 +117,7 @@ def FastQC_worker(fname) :
     global localConfig
     config = localConfig
     lanes = config.get("Options", "lanes")
-    if lanes != "": 
+    if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
     projectName = fname.split("/")[-3] #It's the penultimate directory
@@ -188,7 +188,7 @@ def clumpify_worker(d):
     if config.get("Options", "runID")[7] == "A":
         dist = config.get("bbmap", "clumpify_NovaSeq_dist")
 
-    read1s = glob.glob("*_R1.fastq.gz") 
+    read1s = glob.glob("*_R1.fastq.gz")
     PE = 1
     for r1 in read1s:
         # This takes a while, don't duplicate work
@@ -266,7 +266,7 @@ def parserDemultiplexStats(config) :
     undetermined and the later simply the total clusters
     '''
     lanes = config.get("Options", "lanes")
-    if lanes != "": 
+    if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
     totals = [0,0,0,0,0,0,0,0]
@@ -313,7 +313,7 @@ def postMakeSteps(config) :
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
     lanes = config.get("Options", "lanes")
-    if lanes != "": 
+    if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
     projectDirs = glob.glob("%s/%s%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
@@ -325,6 +325,7 @@ def postMakeSteps(config) :
     #Deduplicate if this is a HiSeq 3000 run
     if config.get("Options", "runID")[7] in ["J", "A"]:
         sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
+        print("sampleDirs ", sampleDirs)
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
         p.map(clumpify_worker, sampleDirs)
@@ -341,7 +342,7 @@ def postMakeSteps(config) :
 
     # Avoid running post-processing (in case of a previous error) on optical duplicate files.
     sampleFiles = [x for x in sampleFiles if "optical_duplicates" not in x]
-
+    print(sampleFiles)
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(FastQC_worker, sampleFiles)
