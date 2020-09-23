@@ -6,6 +6,18 @@ import os
 import glob
 import syslog
 
+def getLatestSeqdir(groupData, PI):
+    seqDirNum = 0
+    for dirs in os.listdir(os.path.join(groupData, PI)):
+        if 'sequencing_data' in dirs:
+            seqDirStrip = dirs.replace('sequencing_data','')
+            if seqDirStrip is not '':
+                if int(seqDirStrip) > seqDirNum:
+                    seqDirNum = int(seqDirStrip)
+    if seqDirNum == 0:
+        return 'sequencing_data'
+    else:
+        return 'sequencing_data' + str(seqDirNum)
 
 def getLibID(gi, libName):
     """
@@ -144,7 +156,9 @@ def linkIntoGalaxy(config):
     for project in projects :
         pname = project.split("/")[-1][8:]
         group = pname.split("_")[-1].lower()
-        basePath = os.path.join(config.get("Paths","groupDir"), group, "sequencing_data")
+        # Grab latest sequencing data dir.
+        latestSeqdir = getLatestSeqdir(config.get("Paths", "groupDir"), group)
+        basePath = os.path.join(config.get("Paths","groupDir"), group, latestSeqdir)
         if not os.path.exists(basePath):
             continue
 
