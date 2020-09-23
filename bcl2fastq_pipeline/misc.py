@@ -25,6 +25,19 @@ import codecs
 import requests
 import json
 
+def getLatestSeqdir(groupData, PI):
+    seqDirNum = 0
+    for dirs in os.listdir(os.path.join(groupData, PI)):
+        if 'sequencing_data' in dirs:
+            seqDirStrip = dirs.replace('sequencing_data','')
+            if seqDirStrip is not '':
+                if int(seqDirStrip) > seqDirNum:
+                    seqDirNum = int(seqDirStrip)
+    if seqDirNum == 0:
+        return 'sequencing_data'
+    else:
+        return 'sequencing_data' + str(seqDirNum)
+
 def transferData(config) :
     """
     Distribute fastq and fastQC files to users.
@@ -43,21 +56,26 @@ def transferData(config) :
             group =  group.split("-")[0]
         syslog.syslog("[transferData] Transferring %s\n" % pname)
 
+        # Get the latest sequencing data folder.
         if os.path.exists("{}/{}/sequencing_data".format(config.get("Paths","groupDir"), group)):
+            # Get latest sequencing data folder (after the check for regular sequencing data to discriminate university runs.
+            latestSeqDir = getLatestSeqdir(config.get("Paths","groupDir"), group)
             #Local group
             syslog.syslog("[transferData] Transferring %s\n" % pname)
             try :
-                p = pathlib.Path("%s/%s/sequencing_data/%s%s" % (
+                p = pathlib.Path("%s/%s/%s/%s%s" % (
                     config.get("Paths","groupDir"),
                     group,
+                    latestSeqDir,
                     config.get("Options","runID"),
                     lanes))
                 if(p.exists() == False) :
                     p.mkdir(mode=0o750, parents=True)
 
-                shutil.copytree(project, "%s/%s/sequencing_data/%s%s/%s" % (
+                shutil.copytree(project, "%s/%s/%s/%s%s/%s" % (
                     config.get("Paths","groupDir"),
                     group,
+                    latestSeqDir,
                     config.get("Options","runID"),
                     lanes,
                     project.split("/")[-1]))
@@ -67,16 +85,18 @@ def transferData(config) :
                     config.get("Options","runID"),
                     lanes,
                     project.split("/")[-1])
-                    , "%s/%s/sequencing_data/%s%s/FASTQC_%s" % (
+                    , "%s/%s/%s/%s%s/FASTQC_%s" % (
                     config.get("Paths","groupDir"),
                     group,
+                    latestSeqDir,
                     config.get("Options","runID"),
                     lanes,
                     project.split("/")[-1]))
 
-                for r, dirs, files in os.walk("%s/%s/sequencing_data/%s%s" % (
+                for r, dirs, files in os.walk("%s/%s/%s/%s%s" % (
                     config.get("Paths","groupDir"),
                     group,
+                    latestSeqDir,
                     config.get("Options","runID"),
                     lanes)):
                     for d in dirs:
