@@ -35,6 +35,7 @@ def get_lib(config, parkour_info): # I think here we should just break if names 
     lib_type = dict()
     temp = dict()
     count = 0
+    print(parkour_info.items())
     for project, sample_info in parkour_info.items():
         if project not in ssheet['Sample_Project'].values:
             temp[project] = list(sample_info.items())[0][1][2]
@@ -47,7 +48,7 @@ def get_lib(config, parkour_info): # I think here we should just break if names 
         lib_type = temp
     elif count > 0 and count < len(parkour_info.items()):
         print("Warning!! some parkour project has been matched the samplesheet for this lane!!")
-
+    print(lib_type)
     return lib_type, message
 
 
@@ -104,14 +105,18 @@ def determineMask(config, parkour_info):
         lib_type, message = get_lib(config, parkour_info)
         exception_failed = False
         libTypes = lib_type.values()
+        print(libTypes)
         for exc in config['lib']['exceptions']:
+            print(exc)
             if exc in libTypes:
+                print("exc!")
                 l = get_special_mask_params(root, lib_type, config) # TODO needs to generalise more. Hard to do it now, since there is nothing but scATAC which can be acounted as axception for now.
                 if len(l) > 0:
                     project_exception = True
                     lanes = "--use-bases-mask {} {}".format(l, lanes)
                     return message, project_exception, lanes
         # otherwise:
+        print("otherwise")
         l = []
         for read in root.findall("Read"):
             if read.get("IsIndexedRead") == "N":
@@ -127,6 +132,7 @@ def determineMask(config, parkour_info):
                     l.append("I{}".format(bcLens[bcNum]))
                 bcNum += 1
         if len(l) > 0:
+            print("reach the end")
             return message, project_exception, "--use-bases-mask {} {}".format(",".join(l), lanes)
     return messsage, project_exception, lanes
 
@@ -139,10 +145,11 @@ def rewriteSampleSheet(config, parkour_info):
     '''
 
     ssheet = config.get("Options", "sampleSheet")
+    print(ssheet)
     if ssheet is None or ssheet == "":
         ssheet = "%s/%s/SampleSheet.csv" % (config.get("Paths", "baseDir"), config.get("Options", "runID"))
 
-    if os.path.isfile(ssheet):
+    if os.path.isfile(ssheet): #TODO there is bug here! somehow samplesheet is always generated, but then the next loop stucks if it has no content!  
         od, oname = tempfile.mkstemp()
         config.set("Options", "sampleSheet", oname)
         of = open(oname, "w")
@@ -188,6 +195,7 @@ def rewriteSampleSheet(config, parkour_info):
         of.close()
         os.close(od)
         message, project_exception, rest = determineMask(config, parkour_info)
+        print("sample sheet rewrote")
         return message, project_exception, "--sample-sheet {} {}".format(oname, rest)
     else :
         config.set("Options", "sampleSheet", "")

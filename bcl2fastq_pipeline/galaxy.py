@@ -8,6 +8,8 @@ import syslog
 
 def getLatestSeqdir(groupData, PI):
     seqDirNum = 0
+    #if PI == 'cabezas-wallscheid':
+    #    PI = 'cabezas'
     for dirs in os.listdir(os.path.join(groupData, PI)):
         if 'sequencing_data' in dirs:
             seqDirStrip = dirs.replace('sequencing_data','')
@@ -156,6 +158,10 @@ def linkIntoGalaxy(config):
     for project in projects :
         pname = project.split("/")[-1][8:]
         group = pname.split("_")[-1].lower()
+        if "-" in group:
+           group = group.split("-")[0]
+        if not os.path.exits(os.path.join(config.get("Paths", "groupDir"), group))
+           continue
         # Grab latest sequencing data dir.
         latestSeqdir = getLatestSeqdir(config.get("Paths", "groupDir"), group)
         basePath = os.path.join(config.get("Paths","groupDir"), group, latestSeqdir)

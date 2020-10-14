@@ -15,7 +15,7 @@ for project in args.projects:
     for fname in fnames :
         idx = fname.rindex("_")
         fnew = fname[0:idx]
-        fnew = re.sub(r"_S[0-9]+_R([12])$",r'_R\1', fnew) + ".fastq.gz"
+        fnew = re.sub(r"_S[0-9]+_R([123])$",r'_R\1', fnew) + ".fastq.gz"
         shutil.move(fname, fnew)
 
     # Fix library names

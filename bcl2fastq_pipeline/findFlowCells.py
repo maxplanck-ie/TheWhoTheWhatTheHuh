@@ -369,7 +369,6 @@ def getSampleSheets(d, fullSheets=False):
         elif nSS > 0:
             bcLens.extend([None] * nSS)
 
-    
     return ssUse, laneOut, bcLens
 
 
@@ -383,7 +382,7 @@ def parse_parkour(config):
     d = {'flowcell_id': FCID}
     res = requests.get(config.get("parkour", "QueryURL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), params=d)
     res1 = requests.get(config.get("parkour", "Query1URL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), params={'index_type_id':'Chromium i7 Multiplex Kit Single Cell v2_v3_PN120262'})
-    print(res1)
+    #print(res1)
     if res.status_code == 200:
         return res.json()
     return dict()
@@ -487,6 +486,7 @@ def newFlowCell(config) :
                     return config, parkour_dict
 
     config.set("Options","runID","")
+    print(parkour_dict)
     return config, parkour_dict
 
 
