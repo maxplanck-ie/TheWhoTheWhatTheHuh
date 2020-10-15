@@ -63,7 +63,7 @@ def plotFastqScreen(fname) :
     p3 = plt.bar(ind, tuple(ohml), color="#FF0000", bottom=tuple(ohol+mhol))
     p4 = plt.bar(ind, tuple(mhml), color="#FF6699", bottom=tuple(ohol+mhol+ohml))
 
-    plt.title("%s" % fname.replace("_R1_screen.txt","").split("/")[-1])
+    plt.title("%s" % fname.replace("_screen.txt","").split("/")[-1])
     plt.ylabel("%")
     plt.ylim((0,105))
     plt.xticks(ind, species, rotation="vertical")
@@ -77,17 +77,17 @@ def fastq_screen_worker(fname) :
     global localConfig
     config = localConfig
 
-    #Skip read #2
-    bname = fname.split("/")[-1]
-    if(bname[-12:] == "_R2.fastq.gz") :
-        return
+    # #Skip read #2
+    # bname = fname.split("/")[-1]
+    # if(bname[-12:] != "_R1.fastq.gz") :
+    #     return
 
     #If the image is already there, then skip
     if os.path.exists("{}_screen.png".format(fname[:-9])) and os.path.exists("{}_screen.txt".format(fname[:-9])):
         return
 
     #Subsample
-    ofile=fname.replace("_R1.fastq.gz","subsampled.fastq")
+    ofile=fname.replace(".fastq.gz","subsampled.fastq")
     cmd = "%s sample %s %s %s" % (
         config.get("fastq_screen","seqtk_command"),
         config.get("fastq_screen","seqtk_options"),
@@ -108,16 +108,16 @@ def fastq_screen_worker(fname) :
 
     #Unlink/rename
     os.unlink(ofile)
-    os.rename(ofile.replace(".fastq","_screen.txt"), fname.replace("_R1.fastq.gz", "_R1_screen.txt"))
+    os.rename(ofile.replace(".fastq","_screen.txt"), fname.replace(".fastq.gz", "_screen.txt"))
 
     #Create the images
-    plotFastqScreen(fname.replace("_R1.fastq.gz", "_R1_screen.txt"))
+    plotFastqScreen(fname.replace(".fastq.gz", "_screen.txt"))
 
 def FastQC_worker(fname) :
     global localConfig
     config = localConfig
     lanes = config.get("Options", "lanes")
-    if lanes != "": 
+    if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
     projectName = fname.split("/")[-3] #It's the penultimate directory
@@ -188,7 +188,7 @@ def clumpify_worker(d):
     if config.get("Options", "runID")[7] == "A":
         dist = config.get("bbmap", "clumpify_NovaSeq_dist")
 
-    read1s = glob.glob("*_R1.fastq.gz") 
+    read1s = glob.glob("*_R1.fastq.gz")
     PE = 1
     for r1 in read1s:
         # This takes a while, don't duplicate work
@@ -266,7 +266,7 @@ def parserDemultiplexStats(config) :
     undetermined and the later simply the total clusters
     '''
     lanes = config.get("Options", "lanes")
-    if lanes != "": 
+    if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
     totals = [0,0,0,0,0,0,0,0]
@@ -313,7 +313,7 @@ def postMakeSteps(config) :
     will try to use a pool of threads. The size of the pool is set by config.postMakeThreads
     '''
     lanes = config.get("Options", "lanes")
-    if lanes != "": 
+    if lanes != "":
         lanes = "_lanes{}".format(lanes)
 
     projectDirs = glob.glob("%s/%s%s/Project_*/*/*.fastq.gz" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
@@ -325,6 +325,7 @@ def postMakeSteps(config) :
     #Deduplicate if this is a HiSeq 3000 run
     if config.get("Options", "runID")[7] in ["J", "A"]:
         sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
+        print("sampleDirs ", sampleDirs)
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
         p.map(clumpify_worker, sampleDirs)
@@ -341,7 +342,7 @@ def postMakeSteps(config) :
 
     # Avoid running post-processing (in case of a previous error) on optical duplicate files.
     sampleFiles = [x for x in sampleFiles if "optical_duplicates" not in x]
-
+    print(sampleFiles)
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(FastQC_worker, sampleFiles)
@@ -355,8 +356,14 @@ def postMakeSteps(config) :
     p.join()
 
     #fastq_screen
+    R2Files = [x for x in sampleFiles if "_R3.fastq.gz" in x]
+    if R2Files == []:
+        R2Files = [x for x in sampleFiles if "_R2.fastq.gz" in x]
+        if R2Files == []:
+           R2Files = [x for x in sampleFiles if "_R1.fastq.gz" in x]
+
     p = mp.Pool(int(config.get("Options", "postMakeThreads")))
-    p.map(fastq_screen_worker, sampleFiles)
+    p.map(fastq_screen_worker, R2Files)
     p.close()
     p.join()
 

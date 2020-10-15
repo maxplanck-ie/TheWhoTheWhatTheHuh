@@ -1,3 +1,4 @@
+# coding=utf-8
 '''
 This file contains functions required to actually convert the bcl files to fastq
 '''
@@ -12,13 +13,71 @@ import codecs
 import tempfile
 import xml.etree.ElementTree as ET
 import re
+import pandas as pd
 from reportlab.lib import colors, utils
 from reportlab.platypus import BaseDocTemplate, Table, Preformatted, Paragraph, Spacer, Image, Frame, NextPageTemplate, PageTemplate, TableStyle
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+def get_lib(config, parkour_info): # I think here we should just break if names dont match! it causes so much unnecessary comlication down the road
+    '''
+    Get liberary type of a project from parkour
+    '''
+    message = ""
+    lanes = config.get("Options", "lanes")
+    ssheet = config.get("Options", "sampleSheet")
+    ssheet = pd.read_csv(ssheet, skiprows = 1)
+    if lanes is '':
+        print("This flowcell has only one lane.")
+    else:
+        print("Lane {} is getting processed.".format(lanes))
 
-def determineMask(config):
+    lib_type = dict()
+    temp = dict()
+    count = 0
+    print(parkour_info.items())
+    for project, sample_info in parkour_info.items():
+        if project not in ssheet['Sample_Project'].values:
+            temp[project] = list(sample_info.items())[0][1][2]
+            count = count + 1
+            print("Warnning!! project {} is missing on lane {}".format(project, lanes)) ## I would have personally preffered if it breaks here, but somehow with external re-seq project we need it.
+        else:
+            lib_type[project] = list(sample_info.items())[0][1][2]
+    if count == len(parkour_info.items()):
+        message = "Warning!! no parkour project has been matched the samplesheet for this lane!!"
+        lib_type = temp
+    elif count > 0 and count < len(parkour_info.items()):
+        print("Warning!! some parkour project has been matched the samplesheet for this lane!!")
+    print(lib_type)
+    return lib_type, message
+
+
+def get_special_mask_params(root, lib_type, config): ##TODO this now can only handel scATAC as exception! it needs to be more generalised.
+    '''
+    Read read and barcode length from the RunInfo.xml
+    '''
+    cmd = ""
+    for read in root.findall("Read"):
+        print(read.get("NumCycles"))
+        if (read.get("IsIndexedRead") == "N") and (read.get("Number")=="1"):
+            cmd += " Y"+read.get("NumCycles")
+        elif (read.get("IsIndexedRead") == "Y") and (read.get("Number")=="2"):
+            cmd += ",I"+read.get("NumCycles")
+        elif (read.get("IsIndexedRead") == "Y") and (read.get("Number")=="3"):
+            cmd += ",Y"+read.get("NumCycles")
+        elif (read.get("IsIndexedRead") == "N") and (read.get("Number")=="4"):
+            cmd += ",Y"+read.get("NumCycles")
+    if "I8,Y16" not in cmd: # This has to be updated when updating the exception dictionary in ini file
+        return ""
+    cmd += " --create-fastq-for-index-reads --minimum-trimmed-read-length=8  \
+             --mask-short-adapter-reads=8  --ignore-missing-positions  \
+             --ignore-missing-controls  --ignore-missing-filter  \
+             --ignore-missing-bcls  -r 6 -w 6 -p 30 "
+
+    return cmd
+
+
+def determineMask(config, parkour_info):
     '''
     If there's already a mask set in the config file then return it.
 
@@ -34,15 +93,30 @@ def determineMask(config):
         for l in lanes.split("_"):
             lanes2.append("s_{}".format(l))
         lanes = "--tiles {}".format(",".join(lanes2))
-
     mask = config.get("Options", "index_mask")
     bcLens = [int(x) for x in config.get("Options","bcLen").split(",")]
     bcNum = 0
+    project_exception = False
     if mask != "":
-        return "--use-bases-mask {} {}".format(mask, lanes)
+        return "", False, "--use-bases-mask {} {}".format(mask, lanes)
     elif os.path.isfile("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID"))):
         xml = ET.parse("{}/{}/RunInfo.xml".format(config.get("Paths","baseDir"),config.get("Options","runID")))
         root = xml.getroot()[0][3]
+        lib_type, message = get_lib(config, parkour_info)
+        exception_failed = False
+        libTypes = lib_type.values()
+        print(libTypes)
+        for exc in config['lib']['exceptions']:
+            print(exc)
+            if exc in libTypes:
+                print("exc!")
+                l = get_special_mask_params(root, lib_type, config) # TODO needs to generalise more. Hard to do it now, since there is nothing but scATAC which can be acounted as axception for now.
+                if len(l) > 0:
+                    project_exception = True
+                    lanes = "--use-bases-mask {} {}".format(l, lanes)
+                    return message, project_exception, lanes
+        # otherwise:
+        print("otherwise")
         l = []
         for read in root.findall("Read"):
             if read.get("IsIndexedRead") == "N":
@@ -58,10 +132,11 @@ def determineMask(config):
                     l.append("I{}".format(bcLens[bcNum]))
                 bcNum += 1
         if len(l) > 0:
-            return "--use-bases-mask {} {}".format(",".join(l), lanes)
-    return lanes
+            print("reach the end")
+            return message, project_exception, "--use-bases-mask {} {}".format(",".join(l), lanes)
+    return messsage, project_exception, lanes
 
-def rewriteSampleSheet(config) :
+def rewriteSampleSheet(config, parkour_info):
     '''
     If it exists, make a modified copy of the sample sheet to ensure that:
      A) It contains no special characters
@@ -70,10 +145,11 @@ def rewriteSampleSheet(config) :
     '''
 
     ssheet = config.get("Options", "sampleSheet")
+    print(ssheet)
     if ssheet is None or ssheet == "":
         ssheet = "%s/%s/SampleSheet.csv" % (config.get("Paths", "baseDir"), config.get("Options", "runID"))
 
-    if os.path.isfile(ssheet):
+    if os.path.isfile(ssheet): #TODO there is bug here! somehow samplesheet is always generated, but then the next loop stucks if it has no content!  
         od, oname = tempfile.mkstemp()
         config.set("Options", "sampleSheet", oname)
         of = open(oname, "w")
@@ -118,7 +194,9 @@ def rewriteSampleSheet(config) :
             of.write(line)
         of.close()
         os.close(od)
-        return "--sample-sheet {} {}".format(oname, determineMask(config))
+        message, project_exception, rest = determineMask(config, parkour_info)
+        print("sample sheet rewrote")
+        return message, project_exception, "--sample-sheet {} {}".format(oname, rest)
     else :
         config.set("Options", "sampleSheet", "")
         return None
@@ -156,7 +234,7 @@ def fixNames(config) :
         syslog.syslog("Moving %s to %s\n" % (pname, pnew))
         shutil.move(pname, pnew)
 
-def bcl2fq(config) :
+def bcl2fq(config, parkour_info):
     '''
     takes things from /dont_touch_this/solexa_runs/XXX/Data/Intensities/BaseCalls
     and writes most output into config.outputDir/XXX, where XXX is the run ID.
@@ -164,48 +242,70 @@ def bcl2fq(config) :
     lanes = config.get("Options", "lanes")
     if lanes != '':
         lanes = '_lanes{}'.format(lanes)
-        
+
     #Make the output directories
     os.makedirs("%s/%s%s" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes), exist_ok=True)
     os.makedirs("%s/%s%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes), exist_ok=True)
 
     #If there's no sample sheet then we need to not mask the last index base!
-    rv = rewriteSampleSheet(config)
+    print("pre-rewrite")
+    message, project_exception, rv = rewriteSampleSheet(config, parkour_info)
     mask = ""
     if(rv is not None) :
         mask = rv
     print("rv {} mask {}".format(rv, mask))
-
+    print(config.get("Options","runID"), lanes)
     mismatch = 2
     while mismatch >= 0:
-        cmd = "%s %s %s -o %s/%s%s -R %s/%s --interop-dir %s/%s%s/InterOp --barcode-mismatches %i" % (
-              config.get("bcl2fastq","bcl2fastq"),
-              config.get("bcl2fastq","bcl2fastq_options"),
-              mask,
-              config.get("Paths","outputDir"),
-              config.get("Options","runID"),
-              lanes,
-              config.get("Paths","baseDir"),
-              config.get("Options","runID"),
-              config.get("Paths","seqFacDir"),
-              config.get("Options","runID"),
-              lanes,
-              mismatch
-        )
+        print(mismatch)
+        if project_exception == False:
+            cmd = "%s %s %s -o %s/%s%s -R %s/%s --interop-dir %s/%s%s/InterOp --barcode-mismatches %i" % (
+                  config.get("bcl2fastq","bcl2fastq"),
+                  config.get("bcl2fastq","bcl2fastq_options"),
+                  mask,
+                  config.get("Paths","outputDir"),
+                  config.get("Options","runID"),
+                  lanes,
+                  config.get("Paths","baseDir"),
+                  config.get("Options","runID"),
+                  config.get("Paths","seqFacDir"),
+                  config.get("Options","runID"),
+                  lanes,
+                  mismatch)
+        else:
+            cmd = "%s %s -o %s/%s%s -R %s/%s --interop-dir %s/%s%s/InterOp --barcode-mismatches %i" % (
+                  config.get("bcl2fastq","bcl2fastq"),
+                  mask,
+                  config.get("Paths","outputDir"),
+                  config.get("Options","runID"),
+                  lanes,
+                  config.get("Paths","baseDir"),
+                  config.get("Options","runID"),
+                  config.get("Paths","seqFacDir"),
+                  config.get("Options","runID"),
+                  lanes,
+                  mismatch)
+
         print(cmd)
         syslog.syslog("[bcl2fq] Running: %s\n" % cmd)
         logOut = open("%s/%s%s.stdout" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
         logErr = open("%s/%s%s.stderr" % (config.get("Paths","logDir"), config.get("Options","runID"), lanes), "w")
         try:
+            print("here! after bcl2fastq")
             subprocess.check_call(cmd, stdout=logOut, stderr=logErr, shell=True)
             rv = 0
         except:
+            print("exception")
             mismatch -= 1
             rv = 1
         logOut.close()
         logErr.close()
         if rv == 0:
-            break
+            print("break!")
+            #break
+            if message is "":
+                message =  "all well!"
+            return message
 
 
 def getOffSpecies(fname) :
