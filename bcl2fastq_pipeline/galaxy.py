@@ -160,7 +160,7 @@ def linkIntoGalaxy(config):
         group = pname.split("_")[-1].lower()
         if "-" in group:
            group = group.split("-")[0]
-        if not os.path.exits(os.path.join(config.get("Paths", "groupDir"), group)):
+        if not os.path.exists(os.path.join(config.get("Paths", "groupDir"), group)):
            continue
         # Grab latest sequencing data dir.
         latestSeqdir = getLatestSeqdir(config.get("Paths", "groupDir"), group)
