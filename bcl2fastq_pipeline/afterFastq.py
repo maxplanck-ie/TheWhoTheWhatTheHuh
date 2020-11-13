@@ -327,18 +327,22 @@ def postMakeSteps(config) :
         sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         print("sampleDirs ", sampleDirs)
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
-        p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
-        p.map(clumpify_worker, sampleDirs)
-        p.close()
-        p.join()
+        sampleDirs = [x for x in sampleDirs if len(glob.glob1(x, "*fastq.gz")) < 3] #Only declumpify if we have 1 or 2 fq files / sample.
+        if sampleDirs:
+            p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
+            p.map(clumpify_worker, sampleDirs)
+            p.close()
+            p.join()
     #Different deduplication for NextSeq samples
     elif config.get("Options", "runID")[7:9] == "NB":
         sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
-        p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
-        p.map(clumpifyNextSeq_worker, sampleDirs)
-        p.close()
-        p.join()
+        sampleDirs = [x for x in sampleDirs if len(glob.glob1(x, "*fastq.gz")) < 3]
+        if sampleDirs:
+            p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
+            p.map(clumpifyNextSeq_worker, sampleDirs)
+            p.close()
+            p.join()
 
     # Avoid running post-processing (in case of a previous error) on optical duplicate files.
     sampleFiles = [x for x in sampleFiles if "optical_duplicates" not in x]

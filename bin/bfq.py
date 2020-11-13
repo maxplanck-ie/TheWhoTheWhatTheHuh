@@ -128,12 +128,14 @@ while True:
         continue
 
     #Upload to Galaxy
-    try :
-        message += bcl2fastq_pipeline.galaxy.linkIntoGalaxy(config)
-    except:
-        syslog.syslog("Got an error while uploading to Galaxy!\n")
-        bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error while uploading to Galaxy!")
-        sleep(config)
+    #Omit from galaxy, we don't automatically do this anymore.
+
+    #try :
+    #    message += bcl2fastq_pipeline.galaxy.linkIntoGalaxy(config)
+    #except:
+    #    syslog.syslog("Got an error while uploading to Galaxy!\n")
+    #    bcl2fastq_pipeline.misc.errorEmail(config, sys.exc_info(), "Got an error while uploading to Galaxy!")
+    #    sleep(config)
 
     transferTime = datetime.datetime.now()-startTime
 

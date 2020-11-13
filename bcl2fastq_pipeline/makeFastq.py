@@ -40,7 +40,7 @@ def get_lib(config, parkour_info): # I think here we should just break if names 
         if project not in ssheet['Sample_Project'].values:
             temp[project] = list(sample_info.items())[0][1][2]
             count = count + 1
-            print("Warnning!! project {} is missing on lane {}".format(project, lanes)) ## I would have personally preffered if it breaks here, but somehow with external re-seq project we need it.
+            print("Warning!! project {} is missing on lane {}".format(project, lanes)) ## I would have personally preffered if it breaks here, but somehow with external re-seq project we need it.
         else:
             lib_type[project] = list(sample_info.items())[0][1][2]
     if count == len(parkour_info.items()):
@@ -67,13 +67,12 @@ def get_special_mask_params(root, lib_type, config): ##TODO this now can only ha
             cmd += ",Y"+read.get("NumCycles")
         elif (read.get("IsIndexedRead") == "N") and (read.get("Number")=="4"):
             cmd += ",Y"+read.get("NumCycles")
-    if "I8,Y16" not in cmd: # This has to be updated when updating the exception dictionary in ini file
+    if "I8,Y16" not in cmd and "I8,Y24" not in cmd: # This has to be updated when updating the exception dictionary in ini file
         return ""
     cmd += " --create-fastq-for-index-reads --minimum-trimmed-read-length=8  \
              --mask-short-adapter-reads=8  --ignore-missing-positions  \
              --ignore-missing-controls  --ignore-missing-filter  \
              --ignore-missing-bcls  -r 6 -w 6 -p 30 "
-
     return cmd
 
 
@@ -105,9 +104,8 @@ def determineMask(config, parkour_info):
         lib_type, message = get_lib(config, parkour_info)
         exception_failed = False
         libTypes = lib_type.values()
-        print(libTypes)
-        for exc in config['lib']['exceptions']:
-            print(exc)
+        for exc in config.get("lib", "exceptions").split(','):
+            print("Found these libTypes: {}".format(exc))
             if exc in libTypes:
                 print("exc!")
                 l = get_special_mask_params(root, lib_type, config) # TODO needs to generalise more. Hard to do it now, since there is nothing but scATAC which can be acounted as axception for now.
@@ -134,7 +132,8 @@ def determineMask(config, parkour_info):
         if len(l) > 0:
             print("reach the end")
             return message, project_exception, "--use-bases-mask {} {}".format(",".join(l), lanes)
-    return messsage, project_exception, lanes
+    else:
+        return message, project_exception, lanes
 
 def rewriteSampleSheet(config, parkour_info):
     '''
@@ -195,6 +194,7 @@ def rewriteSampleSheet(config, parkour_info):
         of.close()
         os.close(od)
         message, project_exception, rest = determineMask(config, parkour_info)
+        print("Determinemask gave me: {} {} {}".format(message, project_exception, rest))
         print("sample sheet rewrote")
         return message, project_exception, "--sample-sheet {} {}".format(oname, rest)
     else :
