@@ -72,7 +72,8 @@ def get_special_mask_params(root, lib_type, config): ##TODO this now can only ha
     cmd += " --create-fastq-for-index-reads --minimum-trimmed-read-length=8  \
              --mask-short-adapter-reads=8  --ignore-missing-positions  \
              --ignore-missing-controls  --ignore-missing-filter  \
-             --ignore-missing-bcls  -r 6 -w 6 -p 30 "
+             --ignore-missing-bcls  -r 6 -w 6 -p 30  \
+             --no-lane-splitting "
     return cmd
 
 

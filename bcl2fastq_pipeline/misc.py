@@ -93,17 +93,6 @@ def transferData(config) :
                     lanes,
                     project.split("/")[-1]))
 
-                for r, dirs, files in os.walk("%s/%s/%s/%s%s" % (
-                    config.get("Paths","groupDir"),
-                    group,
-                    latestSeqDir,
-                    config.get("Options","runID"),
-                    lanes)):
-                    for d in dirs:
-                        os.chmod(os.path.join(r, d), stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
-                    for f in files:
-                        os.chmod(os.path.join(r, f), stat.S_IRWXU | stat.S_IRGRP)
-
                 message += "\n%s\ttransferred" % pname
             except :
                 e = sys.exc_info()

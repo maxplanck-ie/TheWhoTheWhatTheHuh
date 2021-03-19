@@ -328,6 +328,7 @@ def postMakeSteps(config) :
         print("sampleDirs ", sampleDirs)
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         sampleDirs = [x for x in sampleDirs if len(glob.glob1(x, "*fastq.gz")) < 3] #Only declumpify if we have 1 or 2 fq files / sample.
+        sampleDirs = [x for x in sampleDirs if os.stat(os.path.join(x, str(glob.glob1(x, "*R1.fastq.gz")[0]))).st_size/1024**3 < 50] #Only declumpify if we can handle it (filezise < 50 GB
         if sampleDirs:
             p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
             p.map(clumpify_worker, sampleDirs)
@@ -338,6 +339,7 @@ def postMakeSteps(config) :
         sampleDirs = glob.glob("%s/%s%s/Project_*/*/*_R1.fastq.gz" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
         sampleDirs = [os.path.dirname(x) for x in sampleDirs]
         sampleDirs = [x for x in sampleDirs if len(glob.glob1(x, "*fastq.gz")) < 3]
+        sampleDirs = [x for x in sampleDirs if os.stat(os.path.join(x, str(glob.glob1(x, "*R1.fastq.gz")[0]))).st_size/1024**3 < 50] #Only declumpify if we can handle it (filezise < 50 GB
         if sampleDirs:
             p = mp.Pool(int(config.get("Options", "deduplicateInstances")))
             p.map(clumpifyNextSeq_worker, sampleDirs)
