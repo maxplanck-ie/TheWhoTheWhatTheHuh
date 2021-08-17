@@ -157,7 +157,7 @@ def linkIntoGalaxy(config):
     message = "\n"
     projects = glob.glob("%s/%s%s/Project_*" % (config.get("Paths","outputDir"),config.get("Options","runID"), lanes))
     # We don't automatically upload in galaxy anymore, but maintain an 'inclusion list'.
-    GalaxyUsers = bcl2fastq_pipeline.misc.fetchGalaxyUsers(config.get('Galaxy','Users'))
+    galaxyUsers = bcl2fastq_pipeline.misc.fetchGalaxyUsers(config.get('Galaxy','Users'))
     for project in projects :
         pname = project.split("/")[-1][8:]
         if pname.split('_')[1] in galaxyUsers:

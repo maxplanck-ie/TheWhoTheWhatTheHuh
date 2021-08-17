@@ -211,7 +211,8 @@ def fixNames(config) :
     for fname in fnames :
         idx = fname.rindex("_")
         fnew = fname[0:idx]
-        fnew = re.sub(r"_S[0-9]+_R([12])$",r'_R\1', fnew) + ".fastq.gz"
+        fnew = re.sub(r"_S[0-9]+_([IR][123])",r'_\1', fnew) + ".fastq.gz"
+        #fnew = re.sub(r"_S[0-9]+_R([123])$",r'_R\1', fnew) + ".fastq.gz"
         syslog.syslog("Moving %s to %s\n" % (fname, fnew))
         shutil.move(fname, fnew)
 
@@ -246,7 +247,7 @@ def bcl2fq(config, parkour_info):
 
     #Make the output directories
     os.makedirs("%s/%s%s" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes), exist_ok=True)
-    os.makedirs("%s/%s%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes), exist_ok=True)
+    os.makedirs("%s/%s%s/InterOp" % (config.get("Paths","interOpDir"), config.get("Options","runID"), lanes), exist_ok=True)
 
     #If there's no sample sheet then we need to not mask the last index base!
     print("pre-rewrite")
@@ -269,7 +270,7 @@ def bcl2fq(config, parkour_info):
                   lanes,
                   config.get("Paths","baseDir"),
                   config.get("Options","runID"),
-                  config.get("Paths","seqFacDir"),
+                  config.get("Paths","interOpDir"),
                   config.get("Options","runID"),
                   lanes,
                   mismatch)
@@ -282,7 +283,7 @@ def bcl2fq(config, parkour_info):
                   lanes,
                   config.get("Paths","baseDir"),
                   config.get("Options","runID"),
-                  config.get("Paths","seqFacDir"),
+                  config.get("Paths","interOpDir"),
                   config.get("Options","runID"),
                   lanes,
                   mismatch)
@@ -410,31 +411,40 @@ def MakeTotalPDF(config) :
 
 def cpSeqFac(config) :
     '''
-    Copy over Xml and FastQC files
+    Copy over multiQC, Contamination report and Seq reports.
     '''
     lanes = config.get("Options", "lanes")
     if lanes != '':
         lanes = '_lanes{}'.format(lanes)
 
-    shutil.rmtree("%s/%s%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID"), lanes), ignore_errors=True)
-    shutil.copytree("%s/%s/InterOp" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
+    #shutil.rmtree("%s/%s%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID"), lanes), ignore_errors=True)
+    #shutil.copytree("%s/%s/InterOp" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/InterOp" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
     #Xml
-    shutil.copy2("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
-    try:
-        shutil.copy2("%s/%s/runParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
-    except:
-        #renamed on a Nextseq
-        shutil.copy2("%s/%s/RunParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
+    #shutil.copy2("%s/%s/RunInfo.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
+    #try:
+    #    shutil.copy2("%s/%s/runParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
+    #except:
+    #    #renamed on a Nextseq
+    #    shutil.copy2("%s/%s/RunParameters.xml" % (config.get("Paths","baseDir"), config.get("Options","runID")), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
 
     #Make the PDF
+    shutil.rmtree("%s/%s%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID"), lanes), ignore_errors=True)
+    if not os.path.exists("%s/%s%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID"), lanes)):
+        os.mkdir("%s/%s%s" % (config.get("Paths","seqFacDir"),config.get("Options","runID"), lanes))
     txt = MakeTotalPDF(config)
     shutil.copy2("%s/%s%s/ContaminationReport.pdf" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes), "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes))
 
     #FastQC
-    dirs = glob.glob("%s/%s%s/FASTQC_*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
-    for d in dirs :
-        dname = d.split("/")[-1]
-        shutil.rmtree("%s/%s%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes, dname), ignore_errors=True)
-        shutil.copytree(d, "%s/%s%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes, dname))
+    #dirs = glob.glob("%s/%s%s/FASTQC_*" % (config.get("Paths","outputDir"), config.get("Options","runID"), lanes))
+    #for d in dirs :
+    #    dname = d.split("/")[-1]
+    #    shutil.rmtree("%s/%s%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes, dname), ignore_errors=True)
+    #    shutil.copytree(d, "%s/%s%s/%s" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes, dname))
+    # copy over multiQC and sequencingReport per project.
+    dirs = glob.glob("%s/%s%s/Project_*" % (config.get("Paths", "outputDir"), config.get("Options", "runID"), lanes))
+    for d in dirs:
+        projectID = d.split("/")[-1]
+        shutil.copy2(d + "/multiqc_report.html", "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes) + "/" + projectID + "_multiqc.html")
+        shutil.copy2(d + "/SequencingReport.pdf", "%s/%s%s/" % (config.get("Paths","seqFacDir"), config.get("Options","runID"), lanes) + "/" + projectID + "_SequencingReport.pdf")
 
     return txt

@@ -63,7 +63,9 @@ def plotFastqScreen(fname) :
     p3 = plt.bar(ind, tuple(ohml), color="#FF0000", bottom=tuple(ohol+mhol))
     p4 = plt.bar(ind, tuple(mhml), color="#FF6699", bottom=tuple(ohol+mhol+ohml))
 
-    plt.title("%s" % fname.replace("_screen.txt","").split("/")[-1])
+    # grab sample ID from fname
+    sampleID = fname.replace("_screen.txt","").split("/")[-2].replace("Sample_","")
+    plt.title("{}, {}".format(fname.replace("_screen.txt","").split("/")[-1], sampleID))
     plt.ylabel("%")
     plt.ylim((0,105))
     plt.xticks(ind, species, rotation="vertical")
@@ -348,7 +350,6 @@ def postMakeSteps(config) :
 
     # Avoid running post-processing (in case of a previous error) on optical duplicate files.
     sampleFiles = [x for x in sampleFiles if "optical_duplicates" not in x]
-    print(sampleFiles)
     #FastQC
     p = mp.Pool(int(config.get("Options","postMakeThreads")))
     p.map(FastQC_worker, sampleFiles)
@@ -367,7 +368,7 @@ def postMakeSteps(config) :
         R2Files = [x for x in sampleFiles if "_R2.fastq.gz" in x]
         if R2Files == []:
            R2Files = [x for x in sampleFiles if "_R1.fastq.gz" in x]
-
+    
     p = mp.Pool(int(config.get("Options", "postMakeThreads")))
     p.map(fastq_screen_worker, R2Files)
     p.close()

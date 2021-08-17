@@ -25,6 +25,13 @@ import codecs
 import requests
 import json
 
+def fetchGalaxyUsers(userFile):
+    l = list()
+    with open(userFile) as f:
+        for line in f:
+            l.append(line.strip().split()[1]) #Grab last name
+    return l
+
 def getLatestSeqdir(groupData, PI):
     seqDirNum = 0
     for dirs in os.listdir(os.path.join(groupData, PI)):
@@ -92,6 +99,17 @@ def transferData(config) :
                     config.get("Options","runID"),
                     lanes,
                     project.split("/")[-1]))
+
+                for r, dirs, files in os.walk("%s/%s/%s/%s%s" % (
+                    config.get("Paths","groupDir"),
+                    group,
+                    latestSeqDir,
+                    config.get("Options","runID"),
+                    lanes)):
+                    for d in dirs:
+                        os.chmod(os.path.join(r, d), 0o700)
+                    for f in files:
+                        os.chmod(os.path.join(r, f), 0o700)
 
                 message += "\n%s\ttransferred" % pname
             except :
@@ -209,10 +227,11 @@ def makeProjectPDF(node, project, config) :
     PE = False
     if(len(node[0][0][0][0][1]) == 3) :
         PE = True
-        data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30\nRead #1","Ave. Qual.\nRead #1","% Bases\n>= Q30\nRead #2","Ave. Qual.\nRead #2"]]
+#        data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30\nRead #1","Ave. Qual.\nRead #1","% Bases\n>= Q30\nRead #2","Ave. Qual.\nRead #2"]]
+        data = [["Sample ID","Sample Name", "Barcode(s)","Lane(s)","# Reads (million)","% Bases\n>= Q30\nRead #1","% Bases\n>= Q30\nRead #2"]]
     else :
-        data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30","Ave. Qual."]]
-
+#        data = [["Sample ID","Sample Name", "Barcode","Lane","# Reads","% Bases\n>= Q30","Ave. Qual."]]
+        data = [["Sample ID","Sample Name", "Barcode(s)","Lane(s)","# Reads (million)","% Bases\n>= Q30"]]
     #A text blurb
     string = "Project: %s" % project
     p = Paragraph(string, style=stylesheet['Normal'])
@@ -232,6 +251,8 @@ def makeProjectPDF(node, project, config) :
         string = "Sequencer type: HiSeq 2500"
     elif FC[7] == 'J':
         string = "Sequencer type: HiSeq 3000"
+    elif FC[7] == 'A':
+        string = "Sequencer type: NovaSeq 6000"
     else:
         string = "Sequencer type: Unknown"
     p = Paragraph(string, style=stylesheet['Normal'])
@@ -246,15 +267,39 @@ def makeProjectPDF(node, project, config) :
         readLength = int(int(node[0][0][0][0][0][1][0].text)/int(node[0][0][0][0][0][0].text))
     except:
         readLength = 0
-    string = "FastQC version: %s" % (config.get("Version","fastQC"))
-    p = Paragraph(string, style=stylesheet['Normal'])
-    elements.append(p)
+    #string = "FastQC version: %s" % (config.get("Version","fastQC"))
+    #p = Paragraph(string, style=stylesheet['Normal'])
+    #elements.append(p)
     if(PE) :
         string = "%i base paired-end reads" % readLength
     else :
         string = "%i base single-end reads" % readLength
     p = Paragraph(string, style=stylesheet['Normal'])
     elements.append(p)
+    # Try to fetch the libtype and protocol.
+    FCID = FC.split("_")[3][1:]
+    if '-' in FCID:
+        FCID = FCID.split('-')[-1]
+    d = {'flowcell_id': FCID}
+    res = requests.get( config.get("parkour", "QueryURL"), auth=(config.get("parkour", "user"), config.get("parkour", "password")), params=d )
+    if res.status_code == 200:
+        resDic = res.json()
+        projectIndex = project.split('_')[0]
+        for p in resDic:
+            if projectIndex in p:
+                projMatch = p
+        if not projMatch:
+            p = Paragraph("Lib. Type: Unknown", style=stylesheet['Normal'])
+            elements.append(p)
+            p = Paragraph("Protocol: Unknown", style=stylesheet['Normal'])
+            elements.append(p)
+        else:
+            libType = set( [ resDic[projMatch][sam][1] for sam in resDic[projMatch] ] )
+            p = Paragraph("Lib. Type: {}".format(','.join(libType)), style=stylesheet['Normal'])
+            elements.append(p)
+            protType = set( [ resDic[projMatch][sam][2] for sam in resDic[projMatch] ] )
+            p = Paragraph("Protocol: {}".format(','.join(protType)), style=stylesheet['Normal'])
+            elements.append(p)
 
     #Image
     #Scale things
@@ -298,9 +343,9 @@ def makeProjectPDF(node, project, config) :
                                      e[2],
                                      e[3],
                                      "%5.2f" % (100*(e[5]/e[4])),
-                                     "%5.2f" % (e[6]/e[4]),
-                                     "%5.2f" % (100*(e[7]/e[4])),
-                                     "%5.2f" % (e[8]/e[4])
+                                     #"%5.2f" % (e[6]/e[4]),
+                                     "%5.2f" % (100*(e[7]/e[4]))
+                                     #"%5.2f" % (e[8]/e[4])
                             ])
                     except:
                         data.append([getSampleID(st, project, e[2], e[0]),
@@ -309,9 +354,9 @@ def makeProjectPDF(node, project, config) :
                                      e[2],
                                      e[3],
                                      "NA",
-                                     "NA",
-                                     "NA",
+                                     #"NA",
                                      "NA"
+                                     #"NA"
                             ])
                 else :
                     try:
@@ -320,8 +365,8 @@ def makeProjectPDF(node, project, config) :
                                      e[1],
                                      e[2],
                                      e[3],
-                                     "%5.2f" % (100*(e[5]/e[4])),
-                                     "%5.2f" % (e[6]/e[4])
+                                     "%5.2f" % (100*(e[5]/e[4]))
+                                     #"%5.2f" % (e[6]/e[4])
                             ])
                     except:
                         data.append([getSampleID(st, project, e[2], e[0]),
@@ -329,11 +374,63 @@ def makeProjectPDF(node, project, config) :
                                      e[1],
                                      e[2],
                                      e[3],
-                                     "NA",
                                      "NA"
+                                     #"NA"
                             ])
+    # Iterate over data to collapse samples on different lanes.
+    print("DataEntries:")
+    for i in data:
+        print(i)
+    dataDic = {}
+    for row in data:
+        if row[0] == 'Sample ID':
+            dataDic['Header'] = row
+        else:
+            if row[1] in dataDic:
+                dataDic[ row[1] ].append(row)
+            else:
+                dataDic[ row[1] ] = [row]
 
-    t = Table(data, style=[
+    # Fetch the barcode ID from the original sampleSheet.
+    fulSS =  os.path.join(config.get("Paths", "baseDir"), config.get("Options","runID"), 'SampleSheet.csv' )
+    sampleBarCodeIxDic = {}
+    if os.path.exists(fulSS):
+        with open(fulSS) as f:
+            for line in f:
+                if project in line:
+                    sampleBarCodeIxDic[ line.strip().split(',')[2] ] = ','.join([ line.strip().split(',')[5], line.strip().split(',')[7]] )
+
+    dataSquashed = []
+    for entry in dataDic:
+        if entry == 'Header':
+            headerUpd = dataDic[entry][0:3]
+            headerUpd.append("Barcode ID(s)")
+            headerUpd = headerUpd + dataDic[entry][3::]
+            dataSquashed.append( headerUpd )
+            headerLen = len( dataDic[entry] )
+        else:
+            collapsedSample = []
+            collapsedSample = [ dataDic[entry][0][0], dataDic[entry][0][1], dataDic[entry][0][2] ] #Add sample ID, sample Name and Barcode
+            collapsedSample.append( sampleBarCodeIxDic[ dataDic[entry][0][1] ]  )
+            collapsedLanes = ', '.join( [laneNum[3] for laneNum in dataDic[entry] ] )
+            collapsedSample.append(collapsedLanes)
+            collapsedReads = round( sum( [int( readNum[4] ) for readNum in dataDic[entry]] ) / 1000000 , 2)
+            collapsedSample.append(collapsedReads)
+            try:
+                avQualR1 = [ float(qual[5]) for qual in dataDic[entry]  ]
+                avQualR1 = round( ( sum(avQualR1) / len(avQualR1) ), 2)
+            except:
+                avQualR1 = 0
+            collapsedSample.append(avQualR1)
+            if headerLen == 7:
+                try:
+                    avQualR2 = [ float(qual[6]) for qual in dataDic[entry]  ]
+                    avQualR2 = round( ( sum(avQualR2) / len(avQualR2) ), 2)
+                except:
+                    avQualR2 = 0
+                collapsedSample.append(avQualR2)
+            dataSquashed.append(collapsedSample)
+    t = Table(dataSquashed, style=[
         ('ROWBACKGROUNDS', (0, 0), (-1, -1), (0xD3D3D3, None)) #Light grey
         ], repeatRows=1)
     elements.append(t)
@@ -351,11 +448,15 @@ def makeProjectPDF(node, project, config) :
             stylesheet['BodyText'])])
     key.append([Paragraph("Barcode",
             stylesheet['BodyText']),
-        Paragraph("The sample barcode added by the sequencing facility (or you, if you created the libraries yourself). This will generally be 6 nucleotides long.",
+        Paragraph("The sample barcode added by the sequencing facility (or you, if you created the libraries yourself).",
+            stylesheet['BodyText'])])
+    key.append([Paragraph("Barcode ID(s)",
+            stylesheet['BodyText']),
+        Paragraph("The ID of the barcode added by the sequencing facility (or you, if you created the libraries yourself).",
             stylesheet['BodyText'])])
     key.append([Paragraph("Lane", 
             stylesheet['BodyText']),
-        Paragraph("The lane number on the flow cell (there are 8 of them).",
+        Paragraph("The lane number on the flow cell",
             stylesheet['BodyText'])])
     key.append([Paragraph("# Reads", 
             stylesheet['BodyText']),
@@ -365,26 +466,26 @@ def makeProjectPDF(node, project, config) :
             stylesheet['BodyText']),
         Paragraph("The percentage of bases in read #1 of a pair having a Phred-scaled score of at least 30, meaning that the 0.1% or less chance that they're incorrect.",
             stylesheet['BodyText'])])
-    key.append([Paragraph("Ave. Qual. Read #1", 
-            stylesheet['BodyText']),
-        Paragraph("The average Phred-scaled base quality of bases in read #1 of a pair. This number of -10*log10(Probability that the call is incorrect). In other words, if a call is 100% likely to be wrong, the score is 0 (or 10 for 10% likelihood, 20 for 1% likelihood, etc.).",
-            stylesheet['BodyText'])])
+#    key.append([Paragraph("Ave. Qual. Read #1", 
+#            stylesheet['BodyText']),
+#        Paragraph("The average Phred-scaled base quality of bases in read #1 of a pair. This number of -10*log10(Probability that the call is incorrect). In other words, if a call is 100% likely to be wrong, the score is 0 (or 10 for 10% likelihood, 20 for 1% likelihood, etc.).",
+#            stylesheet['BodyText'])])
     key.append([Paragraph("% Bases >= Q30 Read #2", 
             stylesheet['BodyText']),
         Paragraph("Identical to '% Bases >= Q30 Read #1', but for read #2 of a pair.",
             stylesheet['BodyText'])])
-    key.append([Paragraph("Ave. Qual. Read #2", 
-            stylesheet['BodyText']),
-        Paragraph("Identical to 'Ave. Qual. Read #1', but for read #1 of a pair.",
-            stylesheet['BodyText'])])
-    key.append([Paragraph("# Reads", 
-            stylesheet['BodyText']),
-        Paragraph("Identical to '% Bases >= Q30 Read #1', but for single-end datasets.",
-            stylesheet['BodyText'])])
-    key.append([Paragraph("Ave. Qual.", 
-            stylesheet['BodyText']),
-        Paragraph("Identical to 'Ave. Qual. Read #1', but for single-end datasets.",
-            stylesheet['BodyText'])])
+#    key.append([Paragraph("Ave. Qual. Read #2", 
+#            stylesheet['BodyText']),
+#        Paragraph("Identical to 'Ave. Qual. Read #1', but for read #1 of a pair.",
+#            stylesheet['BodyText'])])
+#    key.append([Paragraph("# Reads", 
+#            stylesheet['BodyText']),
+#        Paragraph("Identical to '% Bases >= Q30 Read #1', but for single-end datasets.",
+#            stylesheet['BodyText'])])
+#    key.append([Paragraph("Ave. Qual.", 
+#            stylesheet['BodyText']),
+#        Paragraph("Identical to 'Ave. Qual. Read #1', but for single-end datasets.",
+#            stylesheet['BodyText'])])
     t2 = Table(key, colWidths=(80, None))
     t2.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
     elements.append(t2)
